@@ -10,7 +10,7 @@ Requiere Docker Compose v2.
 docker compose up --build
 ```
 
-Abre <http://localhost:5173>. Los servicios quedan disponibles en `http://localhost:8081` y `http://localhost:8082`.
+Abre <http://localhost:5173>. Los servicios quedan disponibles en `http://localhost:8081`, `http://localhost:8082` y la API Java en `http://localhost:8083`.
 
 Credenciales de prueba en Keycloak 2: `usuario-kc2` / `kc2pass`.
 
@@ -25,3 +25,9 @@ Para probar un usuario local en Keycloak 1, entra al panel de administración en
 5. La app recibe un token emitido por Keycloak 1 en ambos casos.
 
 Los imports son solo para desarrollo. Cambia secretos, contraseñas y configura HTTPS antes de usar este patrón en producción.
+
+## API protegida
+
+Después del login, el frontend envía el access token al endpoint `GET http://localhost:8083/api/status`.
+El backend Spring Boot valida la firma mediante el JWKS interno de Keycloak 1 y comprueba el issuer público `http://localhost:8081/realms/mdrive`.
+La respuesta muestra el estado, el usuario validado, el subject, el issuer y la hora de comprobación.
