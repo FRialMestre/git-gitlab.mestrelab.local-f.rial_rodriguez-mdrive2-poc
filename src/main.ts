@@ -50,6 +50,8 @@ type BackendStatus = {
   checkedAt: string
 }
 
+type MiddlewareStatus = BackendStatus & { application: string }
+
 const checkBackend = async () => {
   const statusElement = document.querySelector<HTMLDivElement>('#backend-status')
   if (!statusElement) return
@@ -75,8 +77,35 @@ const checkBackend = async () => {
     statusElement.querySelector('small')!.textContent = `Usuario validado: ${successBody.user}`
   } catch (error) {
     statusElement.classList.add('is-error')
-    statusElement.querySelector('strong')!.textContent = 'El backend rechazo el token'
+    statusElement.querySelector('strong')!.textContent = 'El backend rechazó el token'
     statusElement.querySelector('small')!.textContent = error instanceof Error ? error.message : String(error)
+  }
+}
+
+const checkMiddleware = async () => {
+  const statusElement = document.querySelector<HTMLDivElement>('#middleware-status')
+  if (!statusElement) return
+
+  try {
+    await keycloak.updateToken(30)
+    const response = await fetch('http://localhost:8083/api/middleware/status', {
+      headers: { Authorization: `Bearer ${keycloak.token}` },
+    })
+
+    const body = await response.json() as MiddlewareStatus | { message?: string }
+    if (!response.ok) {
+      const message = 'message' in body && body.message ? body.message : `HTTP ${response.status}`
+      throw new Error(message)
+    }
+
+    const successBody = body as MiddlewareStatus
+    statusElement.classList.add('is-ok')
+    statusElement.querySelector('strong')!.textContent = successBody.message
+    statusElement.querySelector('small')!.textContent = `Respuesta del middleware: ${successBody.user}`
+  } catch (error) {
+    statusElement.classList.add('is-error')
+    statusElement.querySelector('strong')!.textContent = error instanceof Error ? error.message : String(error)
+    statusElement.querySelector('small')!.textContent = ''
   }
 }
 
@@ -84,7 +113,7 @@ const render = () => {
   const token = keycloak.tokenParsed
   const username = String(token?.preferred_username ?? 'usuario')
   const issuer = String(token?.iss ?? '')
-  const source = issuer.includes('keycloak2') ? 'Keycloak 2 mediante el broker' : 'Keycloak 1'
+  const source = token?.auth_source === 'keycloak2' ? 'Keycloak 2 mediante el broker' : 'Keycloak 1'
   const tokenClaims = [
     ['Usuario', username],
     ['Subject', String(token?.sub ?? '-')],
@@ -109,10 +138,17 @@ const render = () => {
           <div><span>Usuario</span><strong>${escapeHtml(username)}</strong></div>
           <div><span>Emisor</span><strong>Keycloak 1</strong></div>
           <div><span>Federación</span><strong>${escapeHtml(source)}</strong></div>
+        </div>
+        <div class="api-statuses">
           <div id="backend-status" class="backend-status">
-            <span>API protegida</span>
+            <span>Petición al Backend</span>
             <strong>Comprobando...</strong>
             <small>Enviando el bearer token</small>
+          </div>
+          <div id="middleware-status" class="backend-status">
+            <span>Petición al Backend -> Middleware -> Spinpilot</span>
+            <strong>Comprobando...</strong>
+            <small>Propagando el bearer token</small>
           </div>
         </div>
         <section class="token-panel">
@@ -158,6 +194,7 @@ const render = () => {
 
   updateDecodedToken()
   void checkBackend()
+  void checkMiddleware()
 }
 
 const renderError = (error: unknown) => {

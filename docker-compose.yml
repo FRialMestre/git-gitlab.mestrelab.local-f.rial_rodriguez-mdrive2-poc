@@ -1,9 +1,27 @@
 services:
+  middleware:
+    build: ./middleware
+    ports:
+      - "8085:8080"
+    depends_on:
+      keycloak1:
+        condition: service_healthy
+
+  spinpilot:
+    build: ./spinpilot
+    ports:
+      - "8084:8080"
+    depends_on:
+      keycloak2:
+        condition: service_healthy
+
   backend:
     build: ./backend
     ports:
       - "8083:8080"
     depends_on:
+      middleware:
+        condition: service_started
       keycloak1:
         condition: service_healthy
 
