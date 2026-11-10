@@ -1,11 +1,26 @@
 import Keycloak from 'keycloak-js'
 import './style.css'
 
-const keycloak = new Keycloak({
-  url: 'http://localhost:8081',
-  realm: 'mdrive',
-  clientId: 'frontend',
-})
+type ProviderId = 'kc1' | 'kc2'
+
+const keycloaks: Record<ProviderId, Keycloak> = {
+  kc1: new Keycloak({
+    url: 'http://localhost:8081',
+    realm: 'mdrive',
+    clientId: 'frontend',
+  }),
+  kc2: new Keycloak({
+    url: 'http://localhost:8082',
+    realm: 'keycloak2',
+    clientId: 'mdrive-frontend-kc2',
+  }),
+}
+
+let activeProvider: ProviderId | null = null
+
+const getActiveKeycloak = () => activeProvider ? keycloaks[activeProvider] : null
+
+const providerName = (provider: ProviderId) => provider === 'kc2' ? 'Keycloak 2' : 'Keycloak 1'
 
 const app = document.querySelector<HTMLDivElement>('#app')!
 
@@ -37,6 +52,9 @@ const getDecodedToken = (rawToken: string) => {
 }
 
 const updateDecodedToken = () => {
+  const keycloak = getActiveKeycloak()
+  if (!keycloak) return
+
   const decoded = getDecodedToken(keycloak.token ?? '')
   document.querySelector<HTMLElement>('#decoded-header')!.textContent = decoded.header
   document.querySelector<HTMLElement>('#decoded-payload')!.textContent = decoded.payload
@@ -53,8 +71,9 @@ type BackendStatus = {
 type MiddlewareStatus = BackendStatus & { application: string }
 
 const checkBackend = async () => {
+  const keycloak = getActiveKeycloak()
   const statusElement = document.querySelector<HTMLDivElement>('#backend-status')
-  if (!statusElement) return
+  if (!statusElement || !keycloak) return
 
   try {
     await keycloak.updateToken(30)
@@ -83,8 +102,9 @@ const checkBackend = async () => {
 }
 
 const checkMiddleware = async () => {
+  const keycloak = getActiveKeycloak()
   const statusElement = document.querySelector<HTMLDivElement>('#middleware-status')
-  if (!statusElement) return
+  if (!statusElement || !keycloak) return
 
   try {
     await keycloak.updateToken(30)
@@ -110,10 +130,13 @@ const checkMiddleware = async () => {
 }
 
 const render = () => {
+  const keycloak = getActiveKeycloak()
+  if (!keycloak || !activeProvider) return
+
   const token = keycloak.tokenParsed
   const username = String(token?.preferred_username ?? 'usuario')
   const issuer = String(token?.iss ?? '')
-  const source = token?.auth_source === 'keycloak2' ? 'Keycloak 2 mediante el broker' : 'Keycloak 1'
+  const source = providerName(activeProvider)
   const tokenClaims = [
     ['Usuario', username],
     ['Subject', String(token?.sub ?? '-')],
@@ -136,7 +159,7 @@ const render = () => {
         <p class="lede">Tu identidad ha sido validada por ${escapeHtml(source)}.</p>
         <div class="details">
           <div><span>Usuario</span><strong>${escapeHtml(username)}</strong></div>
-          <div><span>Emisor</span><strong>Keycloak 1</strong></div>
+          <div><span>Emisor</span><strong>${escapeHtml(source)}</strong></div>
           <div><span>Federación</span><strong>${escapeHtml(source)}</strong></div>
         </div>
         <div class="api-statuses">
@@ -197,6 +220,33 @@ const render = () => {
   void checkMiddleware()
 }
 
+const renderLogin = () => {
+  app.innerHTML = `
+    <main class="login-state">
+      <p class="eyebrow">MDrive Access</p>
+      <h1>Selecciona tu proveedor</h1>
+      <p>El proveedor elegido determina el issuer del token y los APIs que puedes utilizar.</p>
+      <div class="login-options">
+        <button id="login-kc1" class="login-option" type="button">
+          <strong>Keycloak 1</strong>
+          <span>Backend de MDrive</span>
+        </button>
+        <button id="login-kc2" class="login-option" type="button">
+          <strong>Keycloak 2</strong>
+          <span>Backend de MDrive + Middleware + Spinpilot</span>
+        </button>
+      </div>
+    </main>
+  `
+
+  for (const provider of ['kc1', 'kc2'] as ProviderId[]) {
+    document.querySelector<HTMLButtonElement>(`#login-${provider}`)?.addEventListener('click', () => {
+      window.history.replaceState({}, '', `/?provider=${provider}`)
+      void authenticate(provider)
+    })
+  }
+}
+
 const renderError = (error: unknown) => {
   app.innerHTML = `
     <main class="error-state">
@@ -208,7 +258,19 @@ const renderError = (error: unknown) => {
   `
 }
 
-void keycloak
-  .init({ onLoad: 'login-required', checkLoginIframe: false })
-  .then(() => render())
-  .catch(renderError)
+const authenticate = async (provider: ProviderId) => {
+  activeProvider = provider
+  const authenticated = await keycloaks[provider].init({ onLoad: 'login-required', checkLoginIframe: false })
+  if (authenticated) {
+    render()
+  } else {
+    renderLogin()
+  }
+}
+
+const requestedProvider = new URLSearchParams(window.location.search).get('provider')
+if (requestedProvider === 'kc1' || requestedProvider === 'kc2') {
+  void authenticate(requestedProvider).catch(renderError)
+} else {
+  renderLogin()
+}

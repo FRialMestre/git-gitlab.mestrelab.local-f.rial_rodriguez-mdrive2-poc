@@ -6,6 +6,8 @@ services:
     depends_on:
       keycloak1:
         condition: service_healthy
+      keycloak2:
+        condition: service_healthy
 
   spinpilot:
     build: ./spinpilot
@@ -28,7 +30,7 @@ services:
   frontend:
     build: .
     ports:
-      - "5173:80"
+      - "4200:80"
     depends_on:
       keycloak1:
         condition: service_healthy

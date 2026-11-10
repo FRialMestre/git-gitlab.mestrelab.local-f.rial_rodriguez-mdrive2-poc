@@ -1,6 +1,6 @@
-# MDrive: Keycloak broker demo
+# MDrive y Spinpilot: dos emisores OIDC
 
-Demo Docker de un frontend que autentica contra `keycloak1`. El realm `mdrive` de `keycloak1` publica `keycloak2` como proveedor OIDC, por lo que el usuario puede entrar con una cuenta local de Keycloak 1 o elegir el proveedor `TopSpin` para autenticarse con Keycloak 2.
+Demo Docker con dos proveedores de identidad independientes. MDrive puede iniciar sesión directamente contra Keycloak 1 o Keycloak 2. Spinpilot y su middleware aceptan únicamente tokens emitidos por Keycloak 2.
 
 ## Arranque
 
@@ -10,9 +10,9 @@ Requiere Docker Compose v2.
 docker compose up --build
 ```
 
-Abre <http://localhost:5173>. Los servicios quedan disponibles en:
+Abre <http://localhost:4200>. Los servicios quedan disponibles en:
 
-- Frontend: `http://localhost:5173`
+- Frontend: `http://localhost:4200`
 - Keycloak 1: `http://localhost:8081`
 - Keycloak 2: `http://localhost:8082`
 - Backend Java: `http://localhost:8083`
@@ -29,41 +29,57 @@ Para gestionar usuarios, entra al panel de administración correspondiente, sele
 
 ## Flujo
 
-1. La app redirige al cliente `frontend` de `keycloak1`.
-2. Keycloak 1 muestra su login local y el botón **TopSpin**.
-3. Al elegirlo, Keycloak 1 redirige al realm `keycloak2`.
-4. Keycloak 2 devuelve la identidad al endpoint broker de Keycloak 1.
-5. La app recibe un token emitido por Keycloak 1 en ambos casos.
+La pantalla inicial de MDrive ofrece dos clientes públicos:
 
-El usuario de Keycloak 2 se autentica originalmente en Keycloak 2, pero al usar el broker el token final de la aplicación tiene como issuer a Keycloak 1.
+- `frontend` en Keycloak 1.
+- `mdrive-frontend-kc2` en Keycloak 2.
+
+El proveedor elegido determina el issuer real del token. No se usa el broker para convertir un token de KC1 en uno de KC2.
+
+```text
+MDrive + token KC1 -> MDrive Backend: permitido
+MDrive + token KC1 -> Middleware: rechazado
+
+MDrive + token KC2 -> MDrive Backend: permitido
+MDrive + token KC2 -> Middleware -> Spinpilot: permitido
+```
 
 Los imports son solo para desarrollo. Cambia secretos, contraseñas y configura HTTPS antes de usar este patrón en producción.
 
 ## API protegida
 
 Después del login, el frontend envía el access token al endpoint `GET http://localhost:8083/api/status`.
-El backend Spring Boot valida la firma mediante el JWKS interno de Keycloak 1 y comprueba el issuer público `http://localhost:8081/realms/mdrive`.
+El backend Spring Boot valida la firma mediante el JWKS interno del emisor correspondiente y acepta únicamente estos dos issuers:
+
+```text
+http://localhost:8081/realms/mdrive
+http://localhost:8082/realms/keycloak2
+```
+
 La respuesta muestra el estado, el usuario validado, el subject, el issuer y la hora de comprobación.
 
 ## Middleware
 
 La tarjeta `Backend -> Middleware` del frontend llama a `GET http://localhost:8083/api/middleware/status`.
-El backend valida el JWT recibido, reenvía el mismo bearer token al middleware por la red interna de Docker y el middleware lo reenvía finalmente a Spinpilot.
-Spinpilot valida el token firmado por Keycloak 1 y exige el claim `auth_source=keycloak2`, que Keycloak 1 añade solo cuando el login se ha realizado mediante el broker TopSpin.
+El backend reenvía el bearer token al middleware por la red interna de Docker. El middleware valida exclusivamente tokens de Keycloak 2 y reenvía el mismo token a Spinpilot.
 El endpoint interno del middleware es `GET http://middleware:8080/api/middleware/status` y su puerto publicado para comprobaciones es `http://localhost:8085`.
-Los usuarios locales de Keycloak 1 reciben `403` en Spinpilot; los usuarios federados desde Keycloak 2 reciben `200`.
+Los tokens de Keycloak 1 reciben `401` en el middleware; los tokens de Keycloak 2 reciben `200` y llegan a Spinpilot.
 
 El frontend también muestra el header, el payload decodificado y el JWT completo para depuración de esta PoC.
 
 ## Spinpilot
 
-`spinpilot` es un segundo resource server Java independiente. Valida tokens cuyo issuer sea el realm de Keycloak 1:
+`spinpilot` es un segundo resource server Java independiente. Valida únicamente tokens cuyo issuer sea el realm de Keycloak 2:
 
 ```text
-http://localhost:8081/realms/mdrive
+http://localhost:8082/realms/keycloak2
 ```
 
 Su endpoint protegido es `GET http://localhost:8084/api/spinpilot/status` y el healthcheck público está en `http://localhost:8084/actuator/health`.
-Además, exige `auth_source=keycloak2`: un usuario local de Keycloak 1 recibe `403`, mientras que un usuario autenticado mediante TopSpin es aceptado.
+No necesita la claim `auth_source`: la autorización se basa en la firma y el issuer de KC2.
 
-El token sigue siendo emitido por Keycloak 1 porque la aplicación usa el broker; la distinción de origen se conserva mediante la claim `auth_source`.
+Para observar sus peticiones:
+
+```bash
+docker compose logs -f spinpilot
+```

@@ -12,5 +12,5 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://localhost:8081/realms/mdrive
-          jwk-set-uri: http://keycloak1:8080/realms/mdrive/protocol/openid-connect/certs
+          issuer-uri: http://localhost:8082/realms/keycloak2
+          jwk-set-uri: http://keycloak2:8080/realms/keycloak2/protocol/openid-connect/certs
