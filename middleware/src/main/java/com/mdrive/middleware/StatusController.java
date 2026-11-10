@@ -1,7 +1,6 @@
 package com.mdrive.middleware;
 
 import java.util.Map;
-
 import org.springframework.http.HttpStatusCode;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -40,4 +39,5 @@ public class StatusController {
                 .body(Map.of("status", "error", "message", "Spinpilot rechazó el token"));
         }
     }
+
 }

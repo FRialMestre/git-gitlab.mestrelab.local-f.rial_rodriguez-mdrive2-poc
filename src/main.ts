@@ -2,9 +2,9 @@ import Keycloak from 'keycloak-js'
 import './style.css'
 
 const keycloak = new Keycloak({
-  url: 'http://localhost:8082',
-  realm: 'keycloak2',
-  clientId: 'mdrive-frontend-kc2',
+  url: 'http://localhost:8081',
+  realm: 'mdrive',
+  clientId: 'frontend',
 })
 
 const app = document.querySelector<HTMLDivElement>('#app')!
@@ -113,7 +113,7 @@ const render = () => {
   const token = keycloak.tokenParsed
   const username = String(token?.preferred_username ?? 'usuario')
   const issuer = String(token?.iss ?? '')
-  const source = 'Keycloak 2'
+  const source = 'Keycloak 1'
   const tokenClaims = [
     ['Usuario', username],
     ['Subject', String(token?.sub ?? '-')],

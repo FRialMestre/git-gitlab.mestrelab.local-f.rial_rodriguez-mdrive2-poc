@@ -11,6 +11,43 @@
     "directAccessGrantsEnabled": false,
     "redirectUris": ["http://localhost:4200/*"],
     "webOrigins": ["http://localhost:4200"]
+  }, {
+    "clientId": "keycloak1-broker",
+    "name": "Keycloak 1 identity provider",
+    "enabled": true,
+    "clientAuthenticatorType": "client-secret",
+    "secret": "keycloak1-broker-secret",
+    "protocol": "openid-connect",
+    "publicClient": false,
+    "standardFlowEnabled": true,
+    "redirectUris": [
+      "http://localhost:8081/realms/mdrive/broker/keycloak2/endpoint",
+      "http://localhost:8081/realms/mdrive/broker/keycloak2/endpoint/*"
+    ],
+    "webOrigins": ["http://localhost:8081"]
+  }, {
+    "clientId": "mdrive-token-exchange",
+    "name": "MDrive token exchange client",
+    "enabled": true,
+    "clientAuthenticatorType": "client-secret",
+    "secret": "mdrive-token-exchange-secret",
+    "protocol": "openid-connect",
+    "publicClient": false,
+    "standardFlowEnabled": false,
+    "serviceAccountsEnabled": false,
+    "directAccessGrantsEnabled": false,
+    "attributes": {
+      "standard.token.exchange.enabled": "true"
+    }
+  }, {
+    "clientId": "spinpilot-api",
+    "name": "Spinpilot external API",
+    "enabled": true,
+    "protocol": "openid-connect",
+    "publicClient": false,
+    "bearerOnly": true,
+    "standardFlowEnabled": false,
+    "directAccessGrantsEnabled": false
   }],
   "users": [{
     "username": "usuario-kc2",
@@ -29,8 +66,8 @@
     "trustEmail": true,
     "storeToken": false,
     "config": {
-      "clientId": "keycloak2-broker",
-      "clientSecret": "keycloak2-broker-secret",
+      "clientId": "keycloak1-broker",
+      "clientSecret": "keycloak1-broker-secret",
       "authorizationUrl": "http://localhost:8081/realms/mdrive/protocol/openid-connect/auth",
       "tokenUrl": "http://localhost:8081/realms/mdrive/protocol/openid-connect/token",
       "userInfoUrl": "http://localhost:8081/realms/mdrive/protocol/openid-connect/userinfo",
