@@ -8,6 +8,20 @@
     "redirectUris": ["http://localhost:4200/*"],
     "webOrigins": ["http://localhost:4200"],
     "standardFlowEnabled": true
+  }, {
+    "clientId": "keycloak2-broker",
+    "name": "Keycloak 2 identity provider",
+    "enabled": true,
+    "clientAuthenticatorType": "client-secret",
+    "secret": "keycloak2-broker-secret",
+    "protocol": "openid-connect",
+    "publicClient": false,
+    "standardFlowEnabled": true,
+    "redirectUris": [
+      "http://localhost:8082/realms/keycloak2/broker/keycloak1/endpoint",
+      "http://localhost:8082/realms/keycloak2/broker/keycloak1/endpoint/*"
+    ],
+    "webOrigins": ["http://localhost:8082"]
   }],
   "users": [{
     "username": "usuario-kc1",

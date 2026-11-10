@@ -20,5 +20,25 @@
     "firstName": "Usuario",
     "lastName": "Keycloak 2",
     "credentials": [{"type": "password", "value": "kc2pass", "temporary": false}]
+  }],
+  "identityProviders": [{
+    "alias": "keycloak1",
+    "displayName": "Keycloak 1",
+    "providerId": "oidc",
+    "enabled": true,
+    "trustEmail": true,
+    "storeToken": false,
+    "config": {
+      "clientId": "keycloak2-broker",
+      "clientSecret": "keycloak2-broker-secret",
+      "authorizationUrl": "http://localhost:8081/realms/mdrive/protocol/openid-connect/auth",
+      "tokenUrl": "http://localhost:8081/realms/mdrive/protocol/openid-connect/token",
+      "userInfoUrl": "http://localhost:8081/realms/mdrive/protocol/openid-connect/userinfo",
+      "logoutUrl": "http://localhost:8081/realms/mdrive/protocol/openid-connect/logout",
+      "defaultScope": "openid profile email",
+      "syncMode": "IMPORT",
+      "useJwksUrl": "true",
+      "jwksUrl": "http://localhost:8081/realms/mdrive/protocol/openid-connect/certs"
+    }
   }]
 }

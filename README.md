@@ -1,6 +1,6 @@
-# MDrive y Spinpilot: dos emisores OIDC
+# MDrive y Spinpilot: Keycloak 2 como proveedor principal
 
-Demo Docker con dos proveedores de identidad independientes. MDrive puede iniciar sesión directamente contra Keycloak 1 o Keycloak 2. Spinpilot y su middleware aceptan únicamente tokens emitidos por Keycloak 2.
+Demo Docker con un login unificado en Keycloak 2. Keycloak 1 está configurado como proveedor de identidad externo de Keycloak 2. Tanto los usuarios locales de KC2 como los usuarios de KC1 federados por KC2 reciben un token emitido por KC2.
 
 ## Arranque
 
@@ -29,19 +29,13 @@ Para gestionar usuarios, entra al panel de administración correspondiente, sele
 
 ## Flujo
 
-La pantalla inicial de MDrive ofrece dos clientes públicos:
-
-- `frontend` en Keycloak 1.
-- `mdrive-frontend-kc2` en Keycloak 2.
-
-El proveedor elegido determina el issuer real del token. No se usa el broker para convertir un token de KC1 en uno de KC2.
+MDrive usa únicamente el cliente público `mdrive-frontend-kc2` de Keycloak 2. La pantalla de login de KC2 ofrece el login local y el botón **Keycloak 1**.
 
 ```text
-MDrive + token KC1 -> MDrive Backend: permitido
-MDrive + token KC1 -> Middleware: rechazado
+Usuario local KC2 -> Login KC2 -> token KC2
+Usuario KC1 -> Login KC2 -> Identity Provider KC1 -> token KC2
 
-MDrive + token KC2 -> MDrive Backend: permitido
-MDrive + token KC2 -> Middleware -> Spinpilot: permitido
+Ambos -> MDrive Backend -> Middleware -> Spinpilot: permitido
 ```
 
 Los imports son solo para desarrollo. Cambia secretos, contraseñas y configura HTTPS antes de usar este patrón en producción.
@@ -49,10 +43,9 @@ Los imports son solo para desarrollo. Cambia secretos, contraseñas y configura 
 ## API protegida
 
 Después del login, el frontend envía el access token al endpoint `GET http://localhost:8083/api/status`.
-El backend Spring Boot valida la firma mediante el JWKS interno del emisor correspondiente y acepta únicamente estos dos issuers:
+El backend Spring Boot valida la firma mediante el JWKS interno de Keycloak 2 y acepta este issuer:
 
 ```text
-http://localhost:8081/realms/mdrive
 http://localhost:8082/realms/keycloak2
 ```
 
@@ -63,7 +56,7 @@ La respuesta muestra el estado, el usuario validado, el subject, el issuer y la 
 La tarjeta `Backend -> Middleware` del frontend llama a `GET http://localhost:8083/api/middleware/status`.
 El backend reenvía el bearer token al middleware por la red interna de Docker. El middleware valida exclusivamente tokens de Keycloak 2 y reenvía el mismo token a Spinpilot.
 El endpoint interno del middleware es `GET http://middleware:8080/api/middleware/status` y su puerto publicado para comprobaciones es `http://localhost:8085`.
-Los tokens de Keycloak 1 reciben `401` en el middleware; los tokens de Keycloak 2 reciben `200` y llegan a Spinpilot.
+Los tokens que llegan a MDrive siempre son de Keycloak 2, por lo que ambos tipos de usuario pueden alcanzar Spinpilot. El filtrado de usuarios puede añadirse posteriormente en el backend mediante roles o claims.
 
 El frontend también muestra el header, el payload decodificado y el JWT completo para depuración de esta PoC.
 
