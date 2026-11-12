@@ -6,23 +6,3 @@ management:
     web:
       exposure:
         include: health
-
-spring:
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: http://localhost:8081/realms/mdrive
-          jwk-set-uri: http://keycloak1:8080/realms/mdrive/protocol/openid-connect/certs
-
-app:
-  token-exchange:
-    token-url: http://keycloak2:8080/realms/keycloak2/protocol/openid-connect/token
-    client-id: mdrive-token-exchange
-    client-secret: mdrive-token-exchange-secret
-    audience: spinpilot-api
-  keycloak:
-    admin-token-url: http://keycloak2:8080/realms/master/protocol/openid-connect/token
-    admin-api-url: http://keycloak2:8080/admin/realms/keycloak2
-    admin-user: admin
-    admin-password: admin

@@ -1,83 +1,78 @@
 services:
   middleware:
-    build: ./middleware
-    ports:
-      - "8085:8080"
+    build:
+      context: .
+      dockerfile: middleware/Dockerfile
+    image: mdrive-middleware
+    environment:
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: ${MDRIVE_KC2_ISSUER_URI:-https://mdrive-topspin50-win-dev.mestrelab.local:8443/auth/realms/Bruker}
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: ${MDRIVE_KC2_JWK_SET_URI:-https://mdrive-topspin50-win-dev.mestrelab.local:8443/auth/realms/Bruker/protocol/openid-connect/certs}
+      APP_SPINPILOT_BASE_URL: ${MDRIVE_SPINPILOT_BASE_URL:-https://mdrive-topspin50-win-dev.mestrelab.local:8017}
     depends_on:
       keycloak1:
         condition: service_healthy
-      keycloak2:
-        condition: service_healthy
-
-  spinpilot:
-    build: ./spinpilot
-    ports:
-      - "8084:8080"
-    depends_on:
-      keycloak2:
-        condition: service_healthy
+    networks:
+      - server1
 
   backend:
-    build: ./backend
-    ports:
-      - "8083:8080"
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: mdrive-backend
+    environment:
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: ${MDRIVE_KC1_ISSUER_URI:-https://mdrive2-poc-keycloak.mestrelab.local/realms/mdrive}
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: ${MDRIVE_KC1_JWK_SET_URI:-https://mdrive2-poc-keycloak.mestrelab.local/realms/mdrive/protocol/openid-connect/certs}
+      APP_TOKEN_EXCHANGE_TOKEN_URL: ${MDRIVE_KC1_TOKEN_URL:-https://mdrive2-poc-keycloak.mestrelab.local/realms/mdrive/protocol/openid-connect/token}
+      APP_TOKEN_EXCHANGE_CLIENT_ID: ${MDRIVE_TOKEN_EXCHANGE_CLIENT_ID:-backend-token-exchange}
+      APP_TOKEN_EXCHANGE_CLIENT_SECRET: ${MDRIVE_TOKEN_EXCHANGE_CLIENT_SECRET:-backend-token-exchange-secret}
+      APP_TOKEN_EXCHANGE_REQUESTED_ISSUER: ${MDRIVE_TOKEN_EXCHANGE_REQUESTED_ISSUER:-topspin}
+      MIDDLEWARE_BASE_URL: ${MDRIVE_MIDDLEWARE_BASE_URL:-http://middleware:8080}
     depends_on:
       middleware:
         condition: service_started
       keycloak1:
         condition: service_healthy
+    networks:
+      - server1
 
   frontend:
     build: .
+    image: mdrive-frontend
     ports:
-      - "4200:80"
+      - "80:80"
     depends_on:
       keycloak1:
         condition: service_healthy
       backend:
         condition: service_started
+    networks:
+      - server1
 
   keycloak1:
     image: quay.io/keycloak/keycloak:26.8.1
-    command: start-dev --import-realm
+    command: start-dev --import-realm --features=token-exchange,admin-fine-grained-authz:v1
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
-      KC_HOSTNAME: http://localhost:8081
+      KC_HOSTNAME: https://mdrive2-poc-keycloak.mestrelab.local
       KC_HOSTNAME_STRICT: "false"
+      KC_PROXY_HEADERS: xforwarded
+      KC_HTTP_ENABLED: "true"
       KC_HTTP_PORT: 8080
+      KC_TRUSTSTORE_PATHS: /opt/keycloak/conf/truststores/root_ca_bruker.crt
     ports:
-      - "8081:8080"
-    extra_hosts:
-      - "localhost:host-gateway"
+      - "8080:8080"
     volumes:
+      - ./certs/root_ca_bruker.crt:/opt/keycloak/conf/truststores/root_ca_bruker.crt:ro
       - ./keycloak1/realm-mdrive.json:/opt/keycloak/data/import/mdrive.json:ro
-    depends_on:
-      keycloak2:
-        condition: service_healthy
+    networks:
+      - server1
     healthcheck:
       test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080"]
       interval: 5s
       timeout: 3s
       retries: 30
 
-  keycloak2:
-    image: quay.io/keycloak/keycloak:26.8.1
-    command: start-dev --features=token-exchange,admin-fine-grained-authz:v1 --import-realm
-    environment:
-      KC_BOOTSTRAP_ADMIN_USERNAME: admin
-      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
-      KC_HOSTNAME: http://localhost:8082
-      KC_HOSTNAME_STRICT: "false"
-      KC_HTTP_PORT: 8080
-    ports:
-      - "8082:8080"
-    extra_hosts:
-      - "localhost:host-gateway"
-    volumes:
-      - ./keycloak2/realm-keycloak2.json:/opt/keycloak/data/import/keycloak2.json:ro
-    healthcheck:
-      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080"]
-      interval: 5s
-      timeout: 3s
-      retries: 30
+networks:
+  server1:
+    name: mdrive-server1

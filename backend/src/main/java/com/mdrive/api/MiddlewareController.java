@@ -1,7 +1,6 @@
 package com.mdrive.api;
 
 import java.util.Map;
-import java.util.List;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
@@ -17,7 +16,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
-import org.springframework.web.util.UriComponentsBuilder;
 
 @RestController
 public class MiddlewareController {
@@ -25,15 +23,10 @@ public class MiddlewareController {
     private final RestClient restClient;
     private final String middlewareUrl;
     private final Jackson2ObjectMapperBuilder objectMapperBuilder;
-    private final RestClient keycloakClient;
     private final String tokenExchangeUrl;
     private final String tokenExchangeClientId;
     private final String tokenExchangeClientSecret;
-    private final String tokenExchangeAudience;
-    private final String keycloakAdminTokenUrl;
-    private final String keycloakAdminApiUrl;
-    private final String keycloakAdminUser;
-    private final String keycloakAdminPassword;
+    private final String tokenExchangeRequestedIssuer;
 
     public MiddlewareController(
         RestClient restClient,
@@ -42,42 +35,41 @@ public class MiddlewareController {
         @Value("${app.token-exchange.token-url}") String tokenExchangeUrl,
         @Value("${app.token-exchange.client-id}") String tokenExchangeClientId,
         @Value("${app.token-exchange.client-secret}") String tokenExchangeClientSecret,
-        @Value("${app.token-exchange.audience}") String tokenExchangeAudience,
-        @Value("${app.keycloak.admin-token-url}") String keycloakAdminTokenUrl,
-        @Value("${app.keycloak.admin-api-url}") String keycloakAdminApiUrl,
-        @Value("${app.keycloak.admin-user}") String keycloakAdminUser,
-        @Value("${app.keycloak.admin-password}") String keycloakAdminPassword) {
+        @Value("${app.token-exchange.requested-issuer}") String tokenExchangeRequestedIssuer) {
         this.restClient = restClient;
         this.middlewareUrl = middlewareUrl;
         this.objectMapperBuilder = objectMapperBuilder;
-        this.keycloakClient = restClient;
         this.tokenExchangeUrl = tokenExchangeUrl;
         this.tokenExchangeClientId = tokenExchangeClientId;
         this.tokenExchangeClientSecret = tokenExchangeClientSecret;
-        this.tokenExchangeAudience = tokenExchangeAudience;
-        this.keycloakAdminTokenUrl = keycloakAdminTokenUrl;
-        this.keycloakAdminApiUrl = keycloakAdminApiUrl;
-        this.keycloakAdminUser = keycloakAdminUser;
-        this.keycloakAdminPassword = keycloakAdminPassword;
+        this.tokenExchangeRequestedIssuer = tokenExchangeRequestedIssuer;
     }
 
     @GetMapping("/api/middleware/status")
-    public ResponseEntity<Map> status(@AuthenticationPrincipal Jwt token) {
+    public ResponseEntity<Object> status(@AuthenticationPrincipal Jwt token) {
+        return callMiddleware(token, "/api/middleware/status");
+    }
+
+    @GetMapping("/api/middleware/solvents")
+    public ResponseEntity<Object> solvents(@AuthenticationPrincipal Jwt token) {
+        return callMiddleware(token, "/api/middleware/solvents");
+    }
+
+    private ResponseEntity<Object> callMiddleware(Jwt token, String path) {
         try {
-            if (!"keycloak2".equals(token.getClaimAsString("auth_source"))) {
+            if (!"topspin".equals(token.getClaimAsString("auth_source"))) {
                 return ResponseEntity.ok(Map.of(
                     "status", "skipped",
                     "message", "Usuario local de KC1: no se solicita token para Spinpilot",
                     "user", token.getClaimAsString("preferred_username")));
             }
 
-            ensureKeycloak2Identity(token);
             String keycloak2Token = exchangeToken(token);
             return restClient.get()
-                .uri(middlewareUrl + "/api/middleware/status")
+                .uri(middlewareUrl + path)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + keycloak2Token)
                 .retrieve()
-                .toEntity(Map.class);
+                .toEntity(Object.class);
         } catch (RestClientResponseException error) {
             HttpStatusCode status = error.getStatusCode();
             try {
@@ -99,55 +91,17 @@ public class MiddlewareController {
         form.add("subject_token", token.getTokenValue());
         form.add("subject_token_type", "urn:ietf:params:oauth:token-type:access_token");
         form.add("requested_token_type", "urn:ietf:params:oauth:token-type:access_token");
-        form.add("audience", tokenExchangeAudience);
-        form.add("subject_issuer", "keycloak1");
-        Map exchange = keycloakClient.post()
+        form.add("requested_issuer", tokenExchangeRequestedIssuer);
+        Map exchange = restClient.post()
             .uri(tokenExchangeUrl)
             .contentType(MediaType.APPLICATION_FORM_URLENCODED)
             .body(form)
             .retrieve()
             .body(Map.class);
-        return (String) exchange.get("access_token");
-    }
-
-    private void ensureKeycloak2Identity(Jwt token) {
-        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
-        form.add("grant_type", "password");
-        form.add("client_id", "admin-cli");
-        form.add("username", keycloakAdminUser);
-        form.add("password", keycloakAdminPassword);
-        Map adminToken = keycloakClient.post()
-            .uri(keycloakAdminTokenUrl)
-            .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-            .body(form)
-            .retrieve()
-            .body(Map.class);
-        String accessToken = (String) adminToken.get("access_token");
-        String username = token.getClaimAsString("preferred_username");
-        String email = token.getClaimAsString("email");
-        List<Map<String, Object>> users = keycloakClient.get()
-            .uri(UriComponentsBuilder.fromUriString(keycloakAdminApiUrl + "/users")
-                .queryParam("username", username).queryParam("exact", true).build().toUri())
-            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-            .retrieve().body(List.class);
-        Map<String, Object> user = users.stream()
-            .filter(candidate -> email == null || email.equals(candidate.get("email")))
-            .findFirst()
-            .orElseThrow(() -> new IllegalStateException("No matching KC2 user for KC1 identity"));
-        String userId = (String) user.get("id");
-        List<Map<String, Object>> links = keycloakClient.get()
-            .uri(keycloakAdminApiUrl + "/users/" + userId + "/federated-identity")
-            .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-            .retrieve().body(List.class);
-        boolean linked = links.stream().anyMatch(link ->
-            "keycloak1".equals(link.get("identityProvider")) && token.getSubject().equals(link.get("userId")));
-        if (!linked) {
-            keycloakClient.post()
-                .uri(keycloakAdminApiUrl + "/users/" + userId + "/federated-identity/keycloak1")
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(Map.of("userId", token.getSubject(), "userName", username))
-                .retrieve().toBodilessEntity();
+        String accessToken = (String) exchange.get("access_token");
+        if (accessToken == null || accessToken.isBlank()) {
+            throw new IllegalStateException("KC1 no devolvió un token externo de KC2");
         }
+        return accessToken;
     }
 }

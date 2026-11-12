@@ -6,15 +6,3 @@ management:
     web:
       exposure:
         include: health
-
-spring:
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: http://localhost:8082/realms/keycloak2
-          jwk-set-uri: http://keycloak2:8080/realms/keycloak2/protocol/openid-connect/certs
-
-app:
-  spinpilot:
-    base-url: http://spinpilot:8080

@@ -2,7 +2,7 @@ import Keycloak from 'keycloak-js'
 import './style.css'
 
 const keycloak = new Keycloak({
-  url: 'http://localhost:8081',
+  url: 'https://mdrive2-poc-keycloak.mestrelab.local',
   realm: 'mdrive',
   clientId: 'frontend',
 })
@@ -50,8 +50,6 @@ type BackendStatus = {
   checkedAt: string
 }
 
-type MiddlewareStatus = BackendStatus & { application: string }
-
 const checkBackend = async () => {
   const statusElement = document.querySelector<HTMLDivElement>('#backend-status')
   if (!statusElement) return
@@ -61,7 +59,7 @@ const checkBackend = async () => {
     const rawTokenElement = document.querySelector<HTMLTextAreaElement>('#raw-token')
     if (rawTokenElement) rawTokenElement.value = keycloak.token ?? ''
     updateDecodedToken()
-    const response = await fetch('http://localhost:8083/api/status', {
+    const response = await fetch('/api/status', {
       headers: { Authorization: `Bearer ${keycloak.token}` },
     })
     const body = await response.json() as BackendStatus | { message?: string }
@@ -84,28 +82,32 @@ const checkBackend = async () => {
 
 const checkMiddleware = async () => {
   const statusElement = document.querySelector<HTMLDivElement>('#middleware-status')
+  const responseElement = document.querySelector<HTMLPreElement>('#spinpilot-response')
   if (!statusElement) return
 
   try {
     await keycloak.updateToken(30)
-    const response = await fetch('http://localhost:8083/api/middleware/status', {
+    const response = await fetch('/api/middleware/solvents', {
       headers: { Authorization: `Bearer ${keycloak.token}` },
     })
 
-    const body = await response.json() as MiddlewareStatus | { message?: string }
+    const body = await response.json() as unknown
     if (!response.ok) {
-      const message = 'message' in body && body.message ? body.message : `HTTP ${response.status}`
+      const message = typeof body === 'object' && body !== null && 'message' in body
+        ? String(body.message)
+        : `HTTP ${response.status}`
       throw new Error(message)
     }
 
-    const successBody = body as MiddlewareStatus
     statusElement.classList.add('is-ok')
-    statusElement.querySelector('strong')!.textContent = successBody.message
-    statusElement.querySelector('small')!.textContent = `Respuesta del middleware: ${successBody.user}`
+    statusElement.querySelector('strong')!.textContent = 'Respuesta recibida'
+    statusElement.querySelector('small')!.textContent = 'Middleware -> Connector -> Spinpilot'
+    if (responseElement) responseElement.textContent = JSON.stringify(body, null, 2)
   } catch (error) {
     statusElement.classList.add('is-error')
     statusElement.querySelector('strong')!.textContent = error instanceof Error ? error.message : String(error)
     statusElement.querySelector('small')!.textContent = ''
+    if (responseElement) responseElement.textContent = 'No se obtuvo respuesta de Spinpilot'
   }
 }
 
@@ -146,11 +148,18 @@ const render = () => {
             <small>Enviando el bearer token</small>
           </div>
           <div id="middleware-status" class="backend-status">
-            <span>Petición al Backend -> Middleware -> Spinpilot</span>
+            <span>Petición a Spinpilot</span>
             <strong>Comprobando...</strong>
-            <small>Propagando el bearer token</small>
+            <small>GET /solvents · propagando el bearer token</small>
           </div>
         </div>
+        <section class="spinpilot-response">
+          <div class="response-heading">
+            <p class="eyebrow">Respuesta de Spinpilot</p>
+            <span>GET /solvents · a través de /api/middleware/solvents</span>
+          </div>
+          <pre id="spinpilot-response">Esperando respuesta...</pre>
+        </section>
         <section class="token-panel">
           <div class="token-heading">
             <p class="eyebrow">Access token</p>

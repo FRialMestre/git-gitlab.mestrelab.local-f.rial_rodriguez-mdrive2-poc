@@ -29,8 +29,8 @@ public class SecurityConfig {
     @Bean
     JwtDecoder jwtDecoder() {
         NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(
-            "http://keycloak2:8080/realms/keycloak2/protocol/openid-connect/certs").build();
-        OAuth2TokenValidator<Jwt> issuer = JwtValidators.createDefaultWithIssuer("http://localhost:8082/realms/keycloak2");
+            "https://kc2.server2.localhost:8442/realms/keycloak2/protocol/openid-connect/certs").build();
+        OAuth2TokenValidator<Jwt> issuer = JwtValidators.createDefaultWithIssuer("https://kc2.server2.localhost:8442/realms/keycloak2");
         OAuth2TokenValidator<Jwt> audience = token -> token.getAudience().contains("spinpilot-api")
             ? OAuth2TokenValidatorResult.success()
             : OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token", "Missing spinpilot-api audience", null));
@@ -57,7 +57,7 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:4200"));
+            configuration.setAllowedOrigins(List.of("https://mdrive.server1.localhost:4200"));
         configuration.setAllowedMethods(List.of("GET", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
 

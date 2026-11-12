@@ -20,19 +20,27 @@ public class StatusController {
 
     public StatusController(
         RestClient restClient,
-        @Value("${app.spinpilot.base-url:http://spinpilot:8080}") String spinpilotUrl) {
+        @Value("${app.spinpilot.base-url:https://mdrive-topspin50-win-dev.mestrelab.local:8017}") String spinpilotUrl) {
         this.restClient = restClient;
         this.spinpilotUrl = spinpilotUrl;
     }
 
     @GetMapping("/api/middleware/status")
-    public ResponseEntity<Map> status(@AuthenticationPrincipal Jwt token) {
+    public ResponseEntity<Object> status(@AuthenticationPrincipal Jwt token) {
+        return callSpinpilot(token, "/api/spinpilot/status");
+    }
+
+    @GetMapping("/api/middleware/solvents")
+    public ResponseEntity<Object> solvents(@AuthenticationPrincipal Jwt token) {
+        return callSpinpilot(token, "/solvents");
+    }
+
+    private ResponseEntity<Object> callSpinpilot(Jwt token, String path) {
         try {
             return restClient.get()
-                .uri(spinpilotUrl + "/api/spinpilot/status")
+                .uri(spinpilotUrl + path)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + token.getTokenValue())
-                .retrieve()
-                .toEntity(Map.class);
+                .retrieve().toEntity(Object.class);
         } catch (RestClientResponseException error) {
             HttpStatusCode status = error.getStatusCode();
             return ResponseEntity.status(status)

@@ -1,87 +1,140 @@
-# MDrive y Spinpilot: Keycloak 1 como proveedor principal
+# MDrive y Spinpilot
 
-Demo Docker con un login principal en Keycloak 1. Keycloak 2 está configurado como proveedor de identidad externo de Keycloak 1 y mantiene la emisión de tokens para la API externa Spinpilot.
+PoC de MDrive con Keycloak 1 (KC1) como proveedor principal y broker OIDC
+hacia un Keycloak 2 (KC2) externo, instalado junto a Spinpilot.
+
+## Arquitectura actual
+
+```text
+Navegador
+  -> Proxy TLS -> UI MDrive
+  -> Proxy TLS -> KC1 (realm mdrive)
+
+UI -> Backend MDrive (token KC1)
+Backend -> KC1: token exchange legacy, requested_issuer=topspin
+KC1 -> Backend: token externo de KC2 almacenado durante el login federado
+Backend -> Middleware: operación + token KC2
+Middleware -> Spinpilot: operación + mismo token KC2
+```
+
+La composición Docker ejecuta únicamente los servicios de MDrive:
+
+- frontend/nginx;
+- KC1;
+- backend;
+- middleware.
+
+KC2 y Spinpilot están fuera de esta composición, en el servidor externo de
+Bruker/Topspin:
+
+- KC2: `https://mdrive-topspin50-win-dev.mestrelab.local:8443`;
+- Spinpilot: `https://mdrive-topspin50-win-dev.mestrelab.local:8017`.
+
+El proxy publica la UI y KC1:
+
+- UI: <https://mdrive2-poc-ui.mestrelab.local>;
+- KC1: <https://mdrive2-poc-keycloak.mestrelab.local>.
+
+Backend y middleware sólo son accesibles dentro de la red Docker. El tráfico
+interno entre estos servicios usa HTTP; las conexiones a KC1, KC2 y Spinpilot
+usan HTTPS según sus endpoints configurados.
 
 ## Arranque
 
 Requiere Docker Compose v2.
 
 ```bash
-docker compose up --build
+export MDRIVE_TOKEN_EXCHANGE_CLIENT_SECRET='<secret-del-cliente-app1-middleware>'
+docker compose up --build -d
 ```
 
-Abre <http://localhost:4200>. Los servicios quedan disponibles en:
+El backend recibe su configuración de token exchange desde Docker Compose:
 
-- Frontend: `http://localhost:4200`
-- Keycloak 1: `http://localhost:8081`
-- Keycloak 2: `http://localhost:8082`
-- Backend Java: `http://localhost:8083`
-- Middleware Java: `http://localhost:8085`
-- Spinpilot: `http://localhost:8084`
+- `MDRIVE_KC1_ISSUER_URI`;
+- `MDRIVE_KC1_JWK_SET_URI`;
+- `MDRIVE_KC1_TOKEN_URL`;
+- `MDRIVE_TOKEN_EXCHANGE_CLIENT_ID`;
+- `MDRIVE_TOKEN_EXCHANGE_CLIENT_SECRET` (obligatoria);
+- `MDRIVE_TOKEN_EXCHANGE_REQUESTED_ISSUER`;
+- `MDRIVE_MIDDLEWARE_BASE_URL`.
 
-Credenciales de prueba:
+Las URLs, el client ID, el issuer solicitado y la URL del middleware tienen
+valores por defecto adecuados para esta PoC. El secreto no tiene valor por
+defecto y debe proporcionarse mediante el entorno o un mecanismo de secretos.
 
-- Usuario local de Keycloak 1: `usuario-kc1` / `kc1pass`
-- Usuario de Keycloak 2: `usuario-kc2` / `kc2pass`
-- Administración de ambos Keycloak: `admin` / `admin`
+El middleware recibe desde Compose:
 
-Para gestionar usuarios, entra al panel de administración correspondiente, selecciona el realm y usa **Users**.
+- `MDRIVE_KC2_ISSUER_URI`;
+- `MDRIVE_KC2_JWK_SET_URI`;
+- `MDRIVE_SPINPILOT_BASE_URL`.
 
-## Flujo
+El script [`keycloak2/configure-token-exchange.sh`](/home/jrial/Documents/POCs/mdrive-frontend+keycloak1+keycloak2/keycloak2/configure-token-exchange.sh)
+pertenece al diseño anterior, en el que el exchange se ejecutaba en KC2. No es
+necesario para el flujo actual y no debe ejecutarse contra el KC2 externo sin
+revisarlo.
 
-MDrive usa el cliente público `frontend` de Keycloak 1. La pantalla de login de KC1 ofrece el login local y el botón **Keycloak 2**.
+## Certificados
 
-```text
-Usuario local KC1 -> Login KC1 -> token KC1 -> MDrive
-Usuario KC2 -> Login KC1 -> Identity Provider KC2 -> token KC1 -> MDrive
+- El proxy proporciona el certificado TLS de la UI y KC1.
+- KC1 confía en la CA de Bruker para poder comunicarse con KC2 durante el
+  broker OIDC.
+- El middleware confía en la CA de Bruker para KC2 y Spinpilot.
+- El backend confía en [`certs/MestrelabCA.crt`](/home/jrial/Documents/POCs/mdrive-frontend+keycloak1+keycloak2/certs/MestrelabCA.crt)
+  para conectarse a KC1.
+- [`certs/root_ca_bruker.crt`](/home/jrial/Documents/POCs/mdrive-frontend+keycloak1+keycloak2/certs/root_ca_bruker.crt)
+  se utiliza en KC1 y middleware.
 
-Usuario KC1 local -> Spinpilot: denegado
-Usuario KC2 federado -> token exchange KC1/KC2 -> Spinpilot: permitido
+Los Dockerfiles conservan las CAs Java por defecto y añaden la CA específica
+del servicio. No se generan certificados TLS para la UI ni KC1.
 
-KC2 usa el exchange legacy (`token-exchange:v1`) para convertir el token externo
-de KC1 en un token de KC2. Tras arrancar el entorno, ejecuta una vez
-`keycloak2/configure-token-exchange.sh` con `curl` y `jq` instalados para
-configurar las policies y permisos estáticos de KC2. El backend se encarga
-automáticamente de buscar por username y email la cuenta equivalente en KC2 y
-crear el enlace federado con KC1 antes del primer exchange.
-```
+## Login y token exchange
 
-Los imports son solo para desarrollo. Cambia secretos, contraseñas y configura HTTPS antes de usar este patrón en producción.
+MDrive sólo conoce KC1. KC1 ofrece login local y el proveedor OIDC con alias
+`topspin`, que redirige al usuario hacia KC2. Tras un login federado, KC1 emite
+un token KC1 para el frontend y almacena el token externo de KC2.
 
-## API protegida
+Cuando un usuario federado solicita una operación contra Spinpilot:
 
-Después del login, el frontend envía el access token al endpoint `GET http://localhost:8083/api/status`.
-El backend Spring Boot valida la firma mediante el JWKS interno de Keycloak 1 y acepta este issuer:
+1. el backend valida el token KC1;
+2. comprueba `auth_source=topspin`;
+3. solicita a KC1 un token exchange legacy con `requested_issuer=topspin`;
+4. verifica que la respuesta contiene un `access_token`;
+5. llama al middleware con el token KC2;
+6. el middleware valida el token KC2 y llama a Spinpilot.
 
-```text
-http://localhost:8081/realms/mdrive
-```
+El backend realiza el exchange. El middleware no hace exchange, no administra
+usuarios y no usa la Admin API de KC2. Un usuario local de KC1 puede utilizar
+MDrive, pero no puede iniciar operaciones contra Spinpilot.
 
-La respuesta muestra el estado, el usuario validado, el subject, el issuer y la hora de comprobación.
+El token de KC2 debe tener issuer KC2 y la audience que Spinpilot requiera,
+normalmente `spinpilot-api`. La configuración de esa audience pertenece a KC2.
 
-## Middleware
+## Endpoints de la PoC
 
-La tarjeta `Backend -> Middleware` del frontend llama a `GET http://localhost:8083/api/middleware/status`.
-El backend solo permite usuarios con `auth_source=keycloak2`, busca en KC2 la cuenta con el mismo username y email y crea automáticamente el enlace federado si todavía no existe. Después intercambia el token KC1 por un token KC2 con audience `spinpilot-api` y envía ese token al middleware por la red interna de Docker.
-El middleware valida el token KC2 y lo reenvía a Spinpilot sin realizar otro exchange ni gestionar usuarios.
-El endpoint interno del middleware es `GET http://middleware:8080/api/middleware/status` y su puerto publicado para comprobaciones es `http://localhost:8085`.
-Los usuarios locales de KC1 no tienen `auth_source=keycloak2` y son rechazados antes de llamar a Spinpilot.
+- Estado de MDrive: `GET /api/status`;
+- solvents de Spinpilot: `GET /api/middleware/solvents`;
+- API externa de Spinpilot: `GET https://mdrive-topspin50-win-dev.mestrelab.local:8017/solvents`.
 
-El frontend también muestra el header, el payload decodificado y el JWT completo para depuración de esta PoC.
+La UI muestra la respuesta JSON de solvents para facilitar las pruebas. No se
+debe mostrar el JWT completo en una aplicación real.
 
-## Spinpilot
+## Configuración necesaria en KC1
 
-`spinpilot` es un segundo resource server Java independiente. Valida únicamente tokens cuyo issuer sea el realm de Keycloak 2 y cuyo audience sea `spinpilot-api`:
+KC1 debe tener:
 
-```text
-http://localhost:8082/realms/keycloak2
-```
+- realm `mdrive`;
+- proveedor OIDC hacia KC2 con alias `topspin`;
+- `Store Token` activado en ese proveedor;
+- cliente confidencial `app1-middleware`;
+- secreto del cliente configurado en el backend;
+- permiso de token exchange para `app1-middleware` sobre el proveedor `topspin`;
+- soporte para el token exchange legacy usado por `requested_issuer`.
 
-Su endpoint protegido es `GET http://localhost:8084/api/spinpilot/status` y el healthcheck público está en `http://localhost:8084/actuator/health`.
-La claim `auth_source` se utiliza antes, en el middleware, para impedir que los usuarios locales de KC1 lleguen a esta API.
+El cliente `mdrive-broker` es el cliente OIDC que KC1 utiliza contra KC2. No es
+el cliente del backend para el token exchange.
 
-Para observar sus peticiones:
+## Credenciales
 
-```bash
-docker compose logs -f spinpilot
-```
+Las credenciales importadas son de desarrollo. Deben cambiarse antes de
+cualquier uso real. No se deben incluir secretos reales, contraseñas de
+administración ni tokens en el repositorio.

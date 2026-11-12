@@ -24,6 +24,11 @@ h1 { max-width: 700px; margin: 0; font-family: 'Space Grotesk', sans-serif; font
 .backend-status small { display: block; margin-top: 10px; color: #84958b; line-height: 1.4; }
 .backend-status.is-ok strong { color: #c9ef81; }
 .backend-status.is-error strong { color: #f0adad; }
+.spinpilot-response { margin-top: 28px; border: 1px solid #2a3932; background: #0c110f; }
+.response-heading { padding: 22px 24px 12px; border-bottom: 1px solid #2a3932; }
+.response-heading .eyebrow { margin-bottom: 8px; }
+.response-heading span { color: #84958b; font-size: .85rem; }
+.spinpilot-response pre { max-height: 420px; margin: 0; padding: 24px; overflow: auto; color: #d7e5d9; font: .78rem/1.5 'DM Sans', sans-serif; white-space: pre-wrap; overflow-wrap: anywhere; }
 .token-panel { margin-top: 28px; border: 1px solid #2a3932; background: #16211c; }
 .token-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; padding: 22px 24px; border-bottom: 1px solid #2a3932; }
 .token-heading .eyebrow { margin: 0; }

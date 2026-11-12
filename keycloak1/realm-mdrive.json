@@ -5,8 +5,8 @@
     "clientId": "frontend",
     "enabled": true,
     "publicClient": true,
-    "redirectUris": ["http://localhost:4200/*"],
-    "webOrigins": ["http://localhost:4200"],
+    "redirectUris": ["https://mdrive2-poc-ui.mestrelab.local/*"],
+    "webOrigins": ["https://mdrive2-poc-ui.mestrelab.local"],
     "standardFlowEnabled": true,
     "protocolMappers": [{
       "name": "authentication-source",
@@ -21,6 +21,15 @@
         "userinfo.token.claim": "false"
       }
     }]
+  }, {
+    "clientId": "backend-token-exchange",
+    "enabled": true,
+    "clientAuthenticatorType": "client-secret",
+    "secret": "backend-token-exchange-secret",
+    "publicClient": false,
+    "standardFlowEnabled": false,
+    "directAccessGrantsEnabled": false,
+    "serviceAccountsEnabled": false
   }],
   "users": [{
     "username": "usuario-kc1",
@@ -32,23 +41,23 @@
     "credentials": [{"type": "password", "value": "kc1pass", "temporary": false}]
   }],
   "identityProviders": [{
-    "alias": "keycloak2",
-    "displayName": "Keycloak 2",
+    "alias": "topspin",
+    "displayName": "Topspin",
     "providerId": "oidc",
     "enabled": true,
     "trustEmail": true,
-    "storeToken": false,
+    "storeToken": true,
     "config": {
-      "clientId": "keycloak1-broker",
-      "clientSecret": "keycloak1-broker-secret",
-      "authorizationUrl": "http://localhost:8082/realms/keycloak2/protocol/openid-connect/auth",
-      "tokenUrl": "http://localhost:8082/realms/keycloak2/protocol/openid-connect/token",
-      "userInfoUrl": "http://localhost:8082/realms/keycloak2/protocol/openid-connect/userinfo",
-      "logoutUrl": "http://localhost:8082/realms/keycloak2/protocol/openid-connect/logout",
+      "clientId": "mdrive-broker",
+      "clientSecret": "CkRFnKqyPlwQrhhmwtY8qlAVrStjCx7I",
+      "authorizationUrl": "https://mdrive-topspin50-win-dev.mestrelab.local:8443/auth/realms/Bruker/protocol/openid-connect/auth",
+      "tokenUrl": "https://mdrive-topspin50-win-dev.mestrelab.local:8443/auth/realms/Bruker/protocol/openid-connect/token",
+      "userInfoUrl": "https://mdrive-topspin50-win-dev.mestrelab.local:8443/auth/realms/Bruker/protocol/openid-connect/userinfo",
+      "logoutUrl": "https://mdrive-topspin50-win-dev.mestrelab.local:8443/auth/realms/Bruker/protocol/openid-connect/logout",
       "defaultScope": "openid profile email",
       "syncMode": "IMPORT",
       "useJwksUrl": "true",
-      "jwksUrl": "http://localhost:8082/realms/keycloak2/protocol/openid-connect/certs"
+      "jwksUrl": "https://mdrive-topspin50-win-dev.mestrelab.local:8443/auth/realms/Bruker/protocol/openid-connect/certs"
     }
   }]
 }
