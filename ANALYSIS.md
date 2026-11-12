@@ -108,7 +108,7 @@ y timestamps según la política de auditoría aplicable.
 ## 6. Límites y riesgos conocidos
 
 - El token exchange legacy de KC1 es una dependencia de compatibilidad y debe
-  estar restringido a `app1-middleware` y al IdP `topspin`.
+  estar restringido a `backend-token-exchange` y al IdP `topspin`.
 - `Store Token` conserva material sensible en KC1 y debe protegerse con
   controles de acceso adecuados.
 - La renovación automática del token externo de KC2 no está garantizada.

@@ -24,7 +24,7 @@ services:
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: ${MDRIVE_KC1_JWK_SET_URI:-https://mdrive2-poc-keycloak.mestrelab.local/realms/mdrive/protocol/openid-connect/certs}
       APP_TOKEN_EXCHANGE_TOKEN_URL: ${MDRIVE_KC1_TOKEN_URL:-https://mdrive2-poc-keycloak.mestrelab.local/realms/mdrive/protocol/openid-connect/token}
       APP_TOKEN_EXCHANGE_CLIENT_ID: ${MDRIVE_TOKEN_EXCHANGE_CLIENT_ID:-backend-token-exchange}
-      APP_TOKEN_EXCHANGE_CLIENT_SECRET: ${MDRIVE_TOKEN_EXCHANGE_CLIENT_SECRET:-backend-token-exchange-secret}
+      APP_TOKEN_EXCHANGE_CLIENT_SECRET: ${MDRIVE_TOKEN_EXCHANGE_CLIENT_SECRET:-7sNAd3tOMJTeGuKl8cGxbmnLgnXnriStHUMcIQ9qHkKOhPLaaQ6WZig2ueu0EhiTLlJEOfSnpG1PhG5fDUooH4}
       APP_TOKEN_EXCHANGE_REQUESTED_ISSUER: ${MDRIVE_TOKEN_EXCHANGE_REQUESTED_ISSUER:-topspin}
       MIDDLEWARE_BASE_URL: ${MDRIVE_MIDDLEWARE_BASE_URL:-http://middleware:8080}
     depends_on:

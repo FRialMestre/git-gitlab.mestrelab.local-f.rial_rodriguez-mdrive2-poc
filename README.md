@@ -44,7 +44,7 @@ usan HTTPS según sus endpoints configurados.
 Requiere Docker Compose v2.
 
 ```bash
-export MDRIVE_TOKEN_EXCHANGE_CLIENT_SECRET='<secret-del-cliente-app1-middleware>'
+export MDRIVE_TOKEN_EXCHANGE_CLIENT_SECRET='<secret-del-cliente-backend-token-exchange>'
 docker compose up --build -d
 ```
 
@@ -125,9 +125,9 @@ KC1 debe tener:
 - realm `mdrive`;
 - proveedor OIDC hacia KC2 con alias `topspin`;
 - `Store Token` activado en ese proveedor;
-- cliente confidencial `app1-middleware`;
+- cliente confidencial `backend-token-exchange`;
 - secreto del cliente configurado en el backend;
-- permiso de token exchange para `app1-middleware` sobre el proveedor `topspin`;
+- permiso de token exchange para `backend-token-exchange` sobre el proveedor `topspin`;
 - soporte para el token exchange legacy usado por `requested_issuer`.
 
 El cliente `mdrive-broker` es el cliente OIDC que KC1 utiliza contra KC2. No es

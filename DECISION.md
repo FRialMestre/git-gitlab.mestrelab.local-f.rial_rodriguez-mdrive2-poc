@@ -23,8 +23,6 @@ Backend -> Middleware -> Spinpilot con token KC2
   trazabilidad individual del usuario.
 - El middleware no necesita credenciales administrativas ni lógica de
   identidad.
-- Se elimina la búsqueda de usuarios por username/email en KC2.
-- Se elimina la creación de federated identities desde una llamada de negocio.
 
 ## Configuración requerida
 
@@ -32,7 +30,7 @@ En KC1:
 
 - IdP OIDC hacia KC2 con alias `topspin`;
 - `Store Token` activado;
-- cliente confidencial `app1-middleware`;
+- cliente confidencial `backend-token-exchange`;
 - permiso restringido de token exchange sobre `topspin`;
 - token exchange legacy compatible con `requested_issuer`.
 
@@ -45,33 +43,11 @@ En KC2:
 
 El cliente `mdrive-broker` no es el cliente usado por el backend para el
 exchange. El secreto del backend debe corresponder al cliente
-`app1-middleware` de KC1.
+`backend-token-exchange` de KC1.
 
 ## Decisiones descartadas
 
-### Exchange ejecutado en KC2
-
-Se descarta porque el flujo actual no depende de la Admin API ni de un token
-exchange cross-server iniciado contra KC2. KC1 conserva el token externo y el
-backend solicita su devolución mediante el exchange del propio KC1.
-
 ### Token técnico compartido
 
-Se descarta porque no conserva la identidad individual necesaria para la
-trazabilidad de las operaciones en Spinpilot.
-
-### Gestión manual de usuarios en KC2
-
-Se descarta la búsqueda por username/email y la creación de enlaces desde el
-backend durante una operación de negocio. La relación brokered la gestiona KC1
-como parte del login.
-
-## Consecuencias
-
-- El usuario federado debe haber completado correctamente el login en KC1 para
-  que KC1 disponga del token externo.
-- La caducidad o ausencia del token externo puede requerir repetir el login.
-- El token exchange legacy debe considerarse una superficie sensible y
-  mantenerse con permisos mínimos.
-- La configuración del audience final corresponde a KC2/Spinpilot, no al
-  middleware.
+Aunque sería mucho más facil de implementar, se descarta porque no conserva
+la identidad individual necesaria para la trazabilidad de las operaciones en Spinpilot

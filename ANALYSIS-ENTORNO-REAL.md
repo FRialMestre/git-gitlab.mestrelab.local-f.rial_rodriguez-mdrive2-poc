@@ -7,14 +7,22 @@ middleware. KC2 y Spinpilot se instalan fuera de esta composición en el
 servidor de Bruker/Topspin.
 
 ```mermaid
-flowchart LR
-    U[Navegador] -->|HTTPS| UI[UI MDrive]
-    U -->|HTTPS| KC1[KC1 Mdrive]
-    UI -->|token KC1| B[Backend]
-    B -->|JWKS / token exchange legacy| KC1
-    KC1 <-->|OIDC broker| KC2[KC2 Bruker]
-    B -->|operación + token KC2| MW[Middleware]
-    MW -->|operación + token KC2| SP[Spinpilot]
+flowchart TB
+    U[Client's browser]
+    UI[UI MDrive]
+    KC1[KC1 Mdrive]
+    B[Backend]
+    KC2[KC2 Bruker]
+    MW[Middleware]
+    SP[Spinpilot]
+
+    U <-->|HTTPS| UI
+    U <-->|HTTPS login| KC1
+    UI <-->|HTTPS + token KC1| B
+    B <-->|JWKS / token exchange legacy| KC1
+    KC1 <-->|OIDC broker| KC2
+    B <-->|Instrument request + token KC2| MW
+    MW <-->|Instrument request + token KC2| SP
 ```
 
 El navegador usa KC1 como único punto de entrada de identidad de MDrive. KC1
@@ -76,7 +84,7 @@ advertencias TLS.
 ## 5. Seguridad de identidad
 
 KC1 debe restringir el IdP `topspin`, las redirect URIs, scopes y permisos del
-cliente `app1-middleware`. El token exchange debe estar limitado al issuer
+cliente `backend-token-exchange`. El token exchange debe estar limitado al issuer
 `topspin` y al uso previsto por Spinpilot.
 
 KC2 debe controlar qué audience, scopes y roles aparecen en el token externo.
@@ -90,7 +98,7 @@ error operativo claro.
 
 ## 6. Secretos y auditoría
 
-Los secretos de `app1-middleware`, `mdrive-broker`, administradores y
+Los secretos de `backend-token-exchange`, `mdrive-broker`, administradores y
 truststores deben inyectarse mediante secretos de despliegue y rotarse. No se
 deben usar credenciales `admin/admin` en producción.
 

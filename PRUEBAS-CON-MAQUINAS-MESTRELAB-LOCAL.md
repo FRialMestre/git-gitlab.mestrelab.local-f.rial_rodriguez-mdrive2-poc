@@ -25,7 +25,7 @@ Servidor externo de Bruker/Topspin:
 5. Verificar que el backend confía en
    [`certs/MestrelabCA.crt`](/home/jrial/Documents/POCs/mdrive-frontend+keycloak1+keycloak2/certs/MestrelabCA.crt).
 6. Confirmar en KC1 el IdP OIDC con alias `topspin` y `Store Token` activado.
-7. Confirmar el cliente confidencial `app1-middleware` y su permiso de token
+7. Confirmar el cliente confidencial `backend-token-exchange` y su permiso de token
    exchange sobre `topspin`.
 8. Confirmar en KC2 que `mdrive-broker` tiene la redirect URI exacta del
    endpoint de KC1:
