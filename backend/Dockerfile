@@ -28,7 +28,7 @@ RUN keytool -importcert -noprompt -trustcacerts \
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-COPY --from=build /workspace/target/token-validation-api-0.1.0.jar app.jar
+COPY --from=build /workspace/target/backend-0.1.0.jar app.jar
 COPY --from=build /tmp/mestrelab-truststore.p12 /app/mestrelab-truststore.p12
 ENV JAVA_TOOL_OPTIONS="-Djavax.net.ssl.trustStore=/app/mestrelab-truststore.p12 -Djavax.net.ssl.trustStorePassword=changeit"
 EXPOSE 8080

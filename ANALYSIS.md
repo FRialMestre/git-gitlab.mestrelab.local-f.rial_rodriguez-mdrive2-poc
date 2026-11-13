@@ -8,7 +8,7 @@ flowchart LR
     P --> UI[UI MDrive]
     P --> KC1[KC1\nrealm mdrive]
     UI -->|token KC1| B[Backend MDrive]
-    B -->|token exchange con subject_issuer| KC2
+    B -->|provisioning + token exchange subject_issuer=mdrive| KC2
     KC2 -->|OIDC Identity Provider mdrive| KC1
     B -->|operación + token KC2| M[Middleware]
     M -->|operación + token KC2| S[Spinpilot externo]
@@ -51,6 +51,15 @@ y lo propaga a Spinpilot. No realiza token exchange ni gestiona identidades.
 Spinpilot valida el token emitido por KC2, incluida su firma, issuer, expiración
 y audience, y ejecuta la operación sobre el instrumento.
 
+La audience validada en el flujo actual es:
+
+```text
+TopSpinAutomation
+```
+
+El cliente `TopSpinAutomation-rights` representa el cliente autorizado (`azp`)
+en un token válido, pero no sustituye a la audience de la API.
+
 ## 3. Flujo de autenticación
 
 ### Usuario local de KC1
@@ -71,7 +80,7 @@ y audience, y ejecuta la operación sobre el instrumento.
 5. El backend crea o verifica el enlace federado `mdrive` mediante el cliente
    provisioner.
 6. El backend llama al endpoint de token de KC2 usando el token KC1 como
-   `subject_token` y `subject_issuer=mdrive`.
+   `subject_token`, `subject_issuer=mdrive` y `audience=TopSpinAutomation`.
 7. KC2 emite el token KC2.
 8. El backend envía el token KC2 al middleware.
 9. El middleware valida y reenvía ese token a Spinpilot.
@@ -90,6 +99,12 @@ Java necesitan confianza adicional para los servidores externos:
 | Backend | KC1 y KC2 | `certs/MestrelabCA.crt` y `certs/root_ca_bruker.crt` |
 | Middleware | KC2 y Spinpilot | `certs/root_ca_bruker.crt` |
 | KC1 | KC2 durante el broker | `certs/root_ca_bruker.crt` |
+
+KC2, que se ejecuta como servicio Windows mediante NSSM, debe tener la CA de
+KC1 en el truststore utilizado por la JVM del servicio. La propiedad
+`truststore-paths` debe apuntar a la CA o a un JKS que la contenga. El
+truststore del `Truststore SPI` por sí solo no garantiza que el cliente HTTP
+que descarga los JWKS lo utilice.
 
 Cada Dockerfile parte del truststore Java por defecto para no perder CAs
 públicas y añade sólo la CA que necesita ese servicio.
@@ -121,10 +136,14 @@ y timestamps según la política de auditoría aplicable.
 - La configuración `start-dev` de KC1 no es una configuración productiva.
 - El endpoint de depuración de la UI que muestra el JWT debe eliminarse antes
   de producción.
+- El servicio de KC2 debe poder descargar los JWKS de KC1; si aparece
+  `PKIX path building failed`, el token exchange fallará como
+  `invalid_token` aunque el JWT sea correcto.
 
 ## 7. Validaciones
 
 Se han validado `docker compose config`, los tests Maven de backend y
 middleware, la sintaxis de scripts, `git diff --check` y la construcción de
-las imágenes. La validación funcional pendiente requiere probar login local,
-login federado, token exchange contra KC1 y llamada real a Spinpilot.
+las imágenes. La validación funcional realizada cubre login KC1, provisioning
+idempotente, token exchange KC2, propagación al middleware y llamada real a
+Spinpilot.

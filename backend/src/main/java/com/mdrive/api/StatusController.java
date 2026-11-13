@@ -15,7 +15,7 @@ public class StatusController {
     public Map<String, Object> status(@AuthenticationPrincipal Jwt token) {
         return Map.of(
             "status", "ok",
-            "message", "Token valido en el backend",
+            "message", "Token validated by the backend",
             "user", token.getClaimAsString("preferred_username"),
             "subject", token.getSubject(),
             "issuer", token.getIssuer().toString(),

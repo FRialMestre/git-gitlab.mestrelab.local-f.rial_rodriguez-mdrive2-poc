@@ -12,10 +12,10 @@
   </parent>
 
   <groupId>com.mdrive</groupId>
-  <artifactId>token-validation-api</artifactId>
+  <artifactId>backend</artifactId>
   <version>0.1.0</version>
-  <name>token-validation-api</name>
-  <description>Protected API for the MDrive Keycloak broker demo</description>
+  <name>backend</name>
+  <description>Basic Mdrive backend</description>
 
   <properties>
     <java.version>21</java.version>

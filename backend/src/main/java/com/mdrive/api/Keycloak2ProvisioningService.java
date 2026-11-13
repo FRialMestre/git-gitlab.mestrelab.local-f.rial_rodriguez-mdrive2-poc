@@ -50,11 +50,11 @@ public class Keycloak2ProvisioningService {
         List<Map<String, Object>> users = findUsers(adminToken, username);
         if (users.size() != 1) {
             throw new IllegalStateException(
-                "KC2 debe contener exactamente un usuario con username " + username);
+                "KC2 must contain exactly one user with username " + username);
         }
 
         Map<String, Object> user = users.get(0);
-        String userId = requiredValue(user, "id", "KC2 no devolvió el identificador del usuario");
+        String userId = requiredValue(user, "id", "KC2 did not return the user identifier");
         List<Map<String, Object>> links = findFederatedLinks(adminToken, userId);
 
         for (Map<String, Object> link : links) {
@@ -62,12 +62,12 @@ public class Keycloak2ProvisioningService {
                 continue;
             }
             String linkedSubject = requiredValue(
-                link, "userId", "KC2 devolvió un enlace federado sin userId");
+                link, "userId", "KC2 returned a federated link without userId");
             String linkedUsername = requiredValue(
-                link, "userName", "KC2 devolvió un enlace federado sin userName");
+                link, "userName", "KC2 returned a federated link without userName");
             if (!subject.equals(linkedSubject) || !username.equals(linkedUsername)) {
                 throw new IllegalStateException(
-                    "El enlace federado de KC2 no coincide con el usuario KC1");
+                    "The KC2 federated link does not match the KC1 user");
             }
             return;
         }
@@ -97,7 +97,7 @@ public class Keycloak2ProvisioningService {
             .retrieve()
             .body(new ParameterizedTypeReference<>() {});
         String accessToken = requiredValue(
-            response, "access_token", "KC2 no devolvió un token para el provisioner");
+            response, "access_token", "KC2 did not return a token for the provisioner");
         return accessToken;
     }
 
@@ -129,7 +129,7 @@ public class Keycloak2ProvisioningService {
     private static String requiredClaim(Jwt token, String name) {
         String value = token.getClaimAsString(name);
         if (value == null || value.isBlank()) {
-            throw new IllegalStateException("El token KC1 no contiene " + name);
+            throw new IllegalStateException("The KC1 token does not contain " + name);
         }
         return value;
     }

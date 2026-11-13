@@ -27,7 +27,7 @@ Servidor externo de Bruker/Topspin:
 6. Confirmar en KC1 el cliente `kc2-to-kc1-idp` y su audience mapper.
 7. Confirmar en KC2 el Identity Provider `mdrive` apuntando a KC1.
 8. Confirmar los clientes `mdrive-backend-token-exchange` y
-   `mdrive-kc2-provisioner`, con permisos separados.
+   `mdrive-backend-provisioner`, con permisos separados.
 9. Confirmar en KC1 que el cliente `kc2-to-kc1-idp` tiene la redirect URI:
 
    ```text
@@ -35,6 +35,10 @@ Servidor externo de Bruker/Topspin:
    ```
 
    El path debe coincidir con el alias real del IdP (`mdrive`).
+10. Confirmar en KC2 que `TopSpinAutomation` existe como cliente y que sus
+    permisos de token exchange autorizan a `mdrive-backend-token-exchange`.
+11. Confirmar que el Identity Provider `mdrive` usa el issuer y JWKS de KC1
+    sin el prefijo `/auth`, con la validación de firma activada.
 
 ## Prueba de login y provisioning
 
@@ -46,8 +50,10 @@ Servidor externo de Bruker/Topspin:
 6. Confirmar que el backend busca el username en KC2.
 7. Confirmar que crea el enlace `mdrive` si no existe.
 8. Repetir la llamada y confirmar que el provisioning es idempotente.
-9. Confirmar que el exchange devuelve un token emitido por KC2.
-10. Confirmar que el middleware valida ese token y llama a Spinpilot.
+9. Confirmar que el exchange solicita `audience=TopSpinAutomation`.
+10. Confirmar que el exchange devuelve un token emitido por KC2 con audience
+    `TopSpinAutomation`.
+11. Confirmar que el middleware valida ese token y llama a Spinpilot.
 
 El frontend no debe recibir el token KC2. El backend tampoco debe registrar el
 JWT completo.
@@ -62,7 +68,8 @@ JWT completo.
 | Enlace federado inconsistente | Rechazo sin sobrescribir |
 | Cliente provisioner sin permisos | Error explícito; no se llama a Spinpilot |
 | Token KC2 expirado | Rechazo del middleware o Spinpilot |
-| Audience incorrecta | Rechazo |
+| Audience inexistente | `Audience not found` |
+| Audience sin permiso de exchange | `Client not allowed to exchange` |
 | KC2 no disponible | Error de integración; MDrive local continúa |
 | Spinpilot no disponible | Error controlado con timeout |
 
@@ -75,6 +82,30 @@ mvn -q -f backend/pom.xml test
 mvn -q -f middleware/pom.xml test
 git diff --check
 ```
+
+El backend se empaqueta como `backend-0.1.0.jar` y el middleware como
+`middleware-0.1.0.jar`.
+
+## Diagnóstico TLS de KC2
+
+KC2 debe poder descargar:
+
+```text
+https://mdrive2-poc-keycloak.mestrelab.local/realms/mdrive/protocol/openid-connect/certs
+```
+
+Desde el servidor Windows de KC2 se puede probar la cadena con:
+
+```powershell
+curl.exe --cacert "C:\ruta\mestrelab-ca.crt" --ssl-no-revoke `
+  "https://mdrive2-poc-keycloak.mestrelab.local/realms/mdrive/protocol/openid-connect/certs"
+```
+
+Si el log de KC2 contiene `PKIX path building failed`, la CA no está
+disponible para la JVM que ejecuta el servicio NSSM. `truststore-paths` debe
+apuntar a una ruta efectiva para esa instalación; si es necesario, importar la
+CA en un JKS y configurar la ruta absoluta. Un error TLS de KC2 se presenta
+hacia el backend como `invalid_token` durante la validación de firma.
 
 Las pruebas contra KC2 y Spinpilot requieren conectividad real, certificados
 válidos y usuarios configurados en los dos Keycloak. No se debe ejecutar el

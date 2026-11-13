@@ -32,7 +32,7 @@ const getDecodedToken = (rawToken: string) => {
       payload: decodeJwtPart(parts[1]),
     }
   } catch {
-    return { header: 'No se pudo decodificar', payload: 'No se pudo decodificar' }
+    return { header: 'Unable to decode', payload: 'Unable to decode' }
   }
 }
 
@@ -72,10 +72,10 @@ const checkBackend = async () => {
     const successBody = body as BackendStatus
     statusElement.classList.add('is-ok')
     statusElement.querySelector('strong')!.textContent = successBody.message
-    statusElement.querySelector('small')!.textContent = `Usuario validado: ${successBody.user}`
+    statusElement.querySelector('small')!.textContent = `Validated user: ${successBody.user}`
   } catch (error) {
     statusElement.classList.add('is-error')
-    statusElement.querySelector('strong')!.textContent = 'El backend rechazó el token'
+    statusElement.querySelector('strong')!.textContent = 'The backend rejected the token'
     statusElement.querySelector('small')!.textContent = error instanceof Error ? error.message : String(error)
   }
 }
@@ -100,28 +100,28 @@ const checkMiddleware = async () => {
     }
 
     statusElement.classList.add('is-ok')
-    statusElement.querySelector('strong')!.textContent = 'Respuesta recibida'
+    statusElement.querySelector('strong')!.textContent = 'Response received'
     statusElement.querySelector('small')!.textContent = 'Middleware -> Connector -> Spinpilot'
     if (responseElement) responseElement.textContent = JSON.stringify(body, null, 2)
   } catch (error) {
     statusElement.classList.add('is-error')
     statusElement.querySelector('strong')!.textContent = error instanceof Error ? error.message : String(error)
     statusElement.querySelector('small')!.textContent = ''
-    if (responseElement) responseElement.textContent = 'No se obtuvo respuesta de Spinpilot'
+    if (responseElement) responseElement.textContent = 'No response was received from SpinPilot'
   }
 }
 
 const render = () => {
   const token = keycloak.tokenParsed
-  const username = String(token?.preferred_username ?? 'usuario')
+  const username = String(token?.preferred_username ?? 'user')
   const issuer = String(token?.iss ?? '')
   const source = 'Keycloak 1'
   const tokenClaims = [
-    ['Usuario', username],
+    ['User', username],
     ['Subject', String(token?.sub ?? '-')],
     ['Issuer', issuer],
     ['Scope', String(token?.scope ?? '-')],
-    ['Expira', token?.exp ? new Date(token.exp * 1000).toLocaleString() : '-'],
+    ['Expires', token?.exp ? new Date(token.exp * 1000).toLocaleString() : '-'],
     ['Session ID', String(token?.sid ?? '-')],
   ]
 
@@ -130,52 +130,52 @@ const render = () => {
       <header class="topbar">
         <span class="mark">MD</span>
         <span class="brand">MDrive Access</span>
-        <button id="logout" class="button button-quiet">Cerrar sesión</button>
+        <button id="logout" class="button button-quiet">Log out</button>
       </header>
       <section class="content">
-        <p class="eyebrow">Sesión activa</p>
-        <h1>Hola, ${escapeHtml(username)}</h1>
-        <p class="lede">Tu identidad ha sido validada por ${escapeHtml(source)}.</p>
+        <p class="eyebrow">Active session</p>
+        <h1>Hello, ${escapeHtml(username)}</h1>
+        <p class="lede">Your identity has been validated by ${escapeHtml(source)}.</p>
         <div class="details">
-          <div><span>Usuario</span><strong>${escapeHtml(username)}</strong></div>
-          <div><span>Emisor</span><strong>${escapeHtml(source)}</strong></div>
-          <div><span>Proveedor de autenticación</span><strong>${escapeHtml(source)}</strong></div>
+          <div><span>User</span><strong>${escapeHtml(username)}</strong></div>
+          <div><span>Issuer</span><strong>${escapeHtml(source)}</strong></div>
+          <div><span>Authentication provider</span><strong>${escapeHtml(source)}</strong></div>
         </div>
         <div class="api-statuses">
           <div id="backend-status" class="backend-status">
-            <span>Petición al Backend</span>
-            <strong>Comprobando...</strong>
-            <small>Enviando el bearer token</small>
+            <span>Backend request</span>
+            <strong>Checking...</strong>
+            <small>Sending the bearer token</small>
           </div>
           <div id="middleware-status" class="backend-status">
-            <span>Petición a Spinpilot</span>
-            <strong>Comprobando...</strong>
-            <small>GET /solvents · propagando el bearer token</small>
+            <span>SpinPilot request</span>
+            <strong>Checking...</strong>
+            <small>GET /solvents · forwarding the bearer token</small>
           </div>
         </div>
         <section class="spinpilot-response">
           <div class="response-heading">
-            <p class="eyebrow">Respuesta de Spinpilot</p>
-            <span>GET /solvents · a través de /api/middleware/solvents</span>
+            <p class="eyebrow">SpinPilot response</p>
+            <span>GET /solvents · via /api/middleware/solvents</span>
           </div>
-          <pre id="spinpilot-response">Esperando respuesta...</pre>
+          <pre id="spinpilot-response">Waiting for a response...</pre>
         </section>
         <section class="token-panel">
           <div class="token-heading">
             <p class="eyebrow">Access token</p>
-            <span>Claims leídas en el navegador</span>
+            <span>Claims read in the browser</span>
           </div>
           <div class="claims">
             ${tokenClaims.map(([label, value]) => `<div><span>${label}</span><strong>${escapeHtml(value)}</strong></div>`).join('')}
           </div>
           <div class="raw-token-heading">
-            <span>JWT completo para depuración</span>
-            <button id="copy-token" class="button button-small" type="button">Copiar</button>
+            <span>Complete JWT for debugging</span>
+            <button id="copy-token" class="button button-small" type="button">Copy</button>
           </div>
           <textarea id="raw-token" class="raw-token" readonly spellcheck="false">${escapeHtml(keycloak.token ?? '')}</textarea>
           <div class="decoded-heading">
-            <span>JWT decodificado sin cifrado</span>
-            <small>El contenido está codificado, no cifrado</small>
+            <span>Decoded JWT</span>
+            <small>The content is encoded, not encrypted</small>
           </div>
           <div class="decoded-token">
             <div>
@@ -198,7 +198,7 @@ const render = () => {
 
   document.querySelector<HTMLButtonElement>('#copy-token')?.addEventListener('click', async (event) => {
     await navigator.clipboard.writeText(keycloak.token ?? '')
-    ;(event.currentTarget as HTMLButtonElement).textContent = 'Copiado'
+    ;(event.currentTarget as HTMLButtonElement).textContent = 'Copied'
   })
 
   updateDecodedToken()
@@ -209,9 +209,9 @@ const render = () => {
 const renderError = (error: unknown) => {
   app.innerHTML = `
     <main class="error-state">
-      <p class="eyebrow">No se pudo iniciar</p>
-      <h1>Keycloak no está disponible</h1>
-      <p>Comprueba que los servicios Docker estén levantados y vuelve a intentarlo.</p>
+    <p class="eyebrow">Unable to start</p>
+    <h1>Keycloak is unavailable</h1>
+    <p>Check that the Docker services are running and try again.</p>
       <code>${error instanceof Error ? error.message : String(error)}</code>
     </main>
   `

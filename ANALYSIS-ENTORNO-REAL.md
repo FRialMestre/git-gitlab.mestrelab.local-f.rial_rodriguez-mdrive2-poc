@@ -47,6 +47,20 @@ El backend usa un cliente provisioner separado y de mínimo privilegio para la
 Admin API de KC2. El provisioning es idempotente y se basa en username y `sub`.
 El middleware no realiza exchange ni provisioning.
 
+Los clientes y valores funcionales del realm `Bruker` son:
+
+| Función | Client ID / valor |
+| --- | --- |
+| Broker de KC2 hacia KC1 | `kc2-to-kc1-idp` |
+| Token exchange del backend | `mdrive-backend-token-exchange` |
+| Provisioning Admin API | `mdrive-backend-provisioner` |
+| Audience Spinpilot | `TopSpinAutomation` |
+| Alias del IdP | `mdrive` |
+
+El cliente `TopSpinAutomation-rights` puede aparecer como `azp` y como recurso
+con roles en un token válido, pero la audience de la API es
+`TopSpinAutomation`.
+
 ## 3. Requisitos de red
 
 | Origen | Destino | Propósito |
@@ -72,6 +86,9 @@ modifican el instrumento.
   para KC1.
 - El middleware necesita [`certs/root_ca_bruker.crt`](/home/jrial/Documents/POCs/mdrive-frontend+keycloak1+keycloak2/certs/root_ca_bruker.crt)
   para KC2 y Spinpilot.
+- La JVM de KC2 necesita la CA de KC1 en su truststore global. El servicio
+  `Bruker_Keycloak` se ejecuta mediante NSSM y debe utilizar la misma
+  configuración que se comprueba con `show-config`.
 
 Los truststores por servicio deben conservar las CAs Java por defecto y añadir
 sólo las CAs privadas necesarias. Las claves privadas y las CAs no deben
@@ -86,9 +103,13 @@ advertencias TLS.
 
 KC2 debe restringir el Identity Provider `mdrive`, el cliente
 `mdrive-backend-token-exchange` y el cliente provisioner
-`mdrive-kc2-provisioner`. El token exchange debe estar limitado al alias
-`mdrive` y al uso previsto por Spinpilot. El provisioner sólo debe poder
+`mdrive-backend-provisioner`. El token exchange debe estar limitado al alias
+`mdrive`, a la audience `TopSpinAutomation` y al uso previsto por Spinpilot.
+El provisioner sólo debe poder
 consultar usuarios y crear enlaces federados.
+
+En los permisos de token exchange del cliente `TopSpinAutomation` debe existir
+una política que autorice a `mdrive-backend-token-exchange`.
 
 KC2 debe controlar qué audience, scopes y roles aparecen en el token externo.
 Spinpilot debe validar issuer, firma, expiración y audience y registrar la
@@ -101,7 +122,7 @@ error operativo claro.
 
 ## 6. Secretos y auditoría
 
-Los secretos de `mdrive-backend-token-exchange`, `mdrive-kc2-provisioner`,
+Los secretos de `mdrive-backend-token-exchange`, `mdrive-backend-provisioner`,
 administradores y
 truststores deben inyectarse mediante secretos de despliegue y rotarse. No se
 deben usar credenciales `admin/admin` en producción.

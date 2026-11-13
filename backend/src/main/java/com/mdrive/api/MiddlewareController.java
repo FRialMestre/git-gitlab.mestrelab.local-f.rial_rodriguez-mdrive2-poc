@@ -73,7 +73,7 @@ public class MiddlewareController {
             if (username == null || username.isBlank()) {
                 return ResponseEntity.badRequest().body(Map.of(
                     "status", "error",
-                    "message", "El token KC1 no contiene preferred_username"));
+                    "message", "The KC1 token does not contain preferred_username"));
             }
 
             logger.info("Solicitud {} recibida para el usuario {}", path, username);
@@ -102,7 +102,7 @@ public class MiddlewareController {
             } catch (Exception parsingError) {
                 logger.warn("KC2 rechazó la petición con status {}", status.value());
                 return ResponseEntity.status(status)
-                    .body(Map.of("status", "error", "message", "El middleware rechazó la petición"));
+                    .body(Map.of("status", "error", "message", "The middleware rejected the request"));
             }
         } catch (IllegalStateException error) {
             return ResponseEntity.status(502).body(Map.of(
@@ -115,7 +115,7 @@ public class MiddlewareController {
         try {
             String[] parts = token.getTokenValue().split("\\.", -1);
             if (parts.length != 3) {
-                logger.warn("El token KC1 no tiene formato JWT");
+                logger.warn("The KC1 token is not a JWT");
                 return;
             }
             String header = new String(
@@ -135,7 +135,7 @@ public class MiddlewareController {
                 token.getSubject(),
                 token.getClaimAsString("azp"));
         } catch (IllegalArgumentException | com.fasterxml.jackson.core.JsonProcessingException error) {
-            logger.warn("No se pudo leer la cabecera del token KC1: {}", error.getMessage());
+            logger.warn("Unable to read the KC1 token header: {}", error.getMessage());
         }
     }
 
@@ -157,7 +157,7 @@ public class MiddlewareController {
             .body(Map.class);
         String accessToken = (String) exchange.get("access_token");
         if (accessToken == null || accessToken.isBlank()) {
-            throw new IllegalStateException("KC2 no devolvió un token de acceso");
+            throw new IllegalStateException("KC2 did not return an access token");
         }
         return accessToken;
     }
@@ -167,7 +167,7 @@ public class MiddlewareController {
             logger.warn("Token KC2 recibido: {}", accessToken);
             String[] parts = accessToken.split("\\.", -1);
             if (parts.length != 3) {
-                logger.warn("KC2 devolvió un token que no tiene formato JWT");
+                logger.warn("KC2 returned a token that is not a JWT");
                 return;
             }
             String payload = new String(
@@ -185,7 +185,7 @@ public class MiddlewareController {
                 claims.get("scope"),
                 claims.get("exp"));
         } catch (IllegalArgumentException | com.fasterxml.jackson.core.JsonProcessingException error) {
-            logger.warn("No se pudieron leer los claims del token KC2: {}", error.getMessage());
+            logger.warn("Unable to read the KC2 token claims: {}", error.getMessage());
         }
     }
 }

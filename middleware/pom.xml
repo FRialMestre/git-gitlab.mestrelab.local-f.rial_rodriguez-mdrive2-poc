@@ -12,10 +12,10 @@
   </parent>
 
   <groupId>com.mdrive</groupId>
-  <artifactId>middleware-api</artifactId>
+  <artifactId>middleware</artifactId>
   <version>0.1.0</version>
-  <name>middleware-api</name>
-  <description>Middleware API in the MDrive token flow</description>
+  <name>middleware</name>
+  <description>Basic Mdrive Middleware</description>
 
   <properties>
     <java.version>21</java.version>

@@ -37,7 +37,11 @@ En KC2:
 
 - Identity Provider OIDC `mdrive` apuntando a KC1;
 - cliente `mdrive-backend-token-exchange` autorizado para token exchange;
-- cliente separado `mdrive-kc2-provisioner` con permisos mínimos de Admin API;
+- cliente separado `mdrive-backend-provisioner` con permisos mínimos de Admin
+  API;
+- cliente destino `TopSpinAutomation`, con permisos de token exchange para
+  `mdrive-backend-token-exchange`;
+- audience solicitada: `TopSpinAutomation`;
 - mapping único por username y enlace federado por `sub`;
 - emisión de tokens con la audience que Spinpilot acepta.
 
