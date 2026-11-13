@@ -114,7 +114,6 @@ flowchart TB
 
 ## Keycloak configurations
 
-
 ### KC1
 
 Create the following confidential client in KC1:
@@ -125,10 +124,7 @@ Create the following confidential client in KC1:
 - Redirect URI: https://mdrive-topspin50-win-dev.mestrelab.local:8443/auth/realms/Bruker/broker/mdrive/endpoint.
 - The client secret must match the secret configured in the KC2 Identity Provider mdrive.
 
-
-
 The frontend client in KC1 must have an audience mapper that includes kc2-to-kc1-idp in the access token. KC2 uses this audience when validating the KC1 subject token.
-
 
 ### KC2
 
@@ -140,13 +136,18 @@ In the KC2 realm Bruker, configure the following OpenID Connect Identity Provide
 - Client authentication: Client secret created on KC1.
 - Validate signatures: On.
 - Use JWKS URL: On.
+- Hide on login page: On.
 - Issuer: https://mdrive2-poc-keycloak.mestrelab.local/realms/mdrive.
 - JWKS URL: https://mdrive2-poc-keycloak.mestrelab.local/realms/mdrive/protocol/openid-connect/certs.
 - Authorization URL: https://mdrive2-poc-keycloak.mestrelab.local/realms/mdrive/protocol/openid-connect/auth.
 - Token URL: https://mdrive2-poc-keycloak.mestrelab.local/realms/mdrive/protocol/openid-connect/token.
 - User Info URL: https://mdrive2-poc-keycloak.mestrelab.local/realms/mdrive/protocol/openid-connect/userinfo.
 
-
+The `Hide on login page` option only removes the `mdrive` login option from
+the KC2 login page. The Identity Provider must remain enabled because KC2
+requires it to validate the `subject_issuer=mdrive` token exchange and the
+federated identity link. Hiding the provider is not a security boundary;
+users should not be given direct access to the KC2 login interface.
 
 #### KC2 token-exchange client
 
@@ -157,8 +158,6 @@ Create the following confidential client in the KC2 realm Bruker:
 - Direct access grants: Off.
 - Service accounts: Off.
 The backend calls the KC2 token endpoint with grant_type=token-exchange, subject_issuer=mdrive and audience=TopSpinAutomation.
-
-
 
 #### KC2 SpinPilot target client and permissions
 
@@ -182,10 +181,6 @@ Create a separate confidential client for the KC2 Admin API:
 - Use a separate secret from the token-exchange client.
 - Grant only the user lookup and federated-link permissions required by the deployed KC2 version: Grant the following Service accounts roles: manage-users, view-users, query-users
 
-
-
-
-
 The backend uses this client to find exactly one KC2 user by username, inspect existing federated identities and create the mdrive federated link when it is missing. It does not create KC2 users and rejects ambiguous or inconsistent links.
 
 ## Certificates and trust
@@ -194,6 +189,7 @@ The backend uses this client to find exactly one KC2 user by username, inspect e
 - KC1 trusts the Bruker CA for its HTTPS connection to KC2.
 - The middleware trusts the Bruker CA for KC2 and SpinPilot.
 - The backend trusts the Mestrelab CA for KC1 and the Bruker CA for KC2. The KC2 service Bruker_Keycloak must use a truststore containing the Mestrelab CA.
+
 ## Username-only federation
 
 The KC2 user record may provide only a username (as Bruker IAM only requires a username). The current integration therefore does not require email, first name, or last name to establish the instrument identity.
@@ -224,10 +220,11 @@ Provisioning and federated links must also be evaluated in the context of the se
 The initial account lookup may use the KC1 `preferred_username` to locate the corresponding KC2 user. The stable identity must then be represented by the KC1 issuer and subject, together with the installation context where required.
 
 The current implementation is single-instance and would require a configuration model, installation selection logic, isolated credentials, and separate trust boundaries before supporting multiple installations.
+
 ## Identified problems and limitations
 
 - The legacy token exchange feature and fine-grained authorization are compatibility dependencies of the current KC1 version.
-- External token renewal is not guaranteed indefinitely; a new federated login may be required after expiration.
+- KC2 access tokens are short-lived. The current backend requests a new KC2 token exchange for each instrument operation and does not depend on indefinite token renewal. Long-running or multi-step operations must handle token expiration explicitly and report re-exchange failures.
 - Bruker BioSpin IAM allows to create users without email, firstname and lastname. So we can only relay on a “username” field and that’s the only info available for Mdrive to match users between our Keycloak and Bruker’s one
 - End-to-end error tracing is critical because an instrument operation crosses several components and network boundaries: the browser, KC1, backend, KC2, middleware, connector and SpinPilot. Each application should support configurable `DEBUG` logging so that authentication, provisioning, token exchange, forwarding and downstream failures can be diagnosed independently.
 - Debug logging should be disabled by default in production. Logs should use a shared correlation or request ID across the complete operation and must redact access tokens, client secrets, passwords and other sensitive identity data.
