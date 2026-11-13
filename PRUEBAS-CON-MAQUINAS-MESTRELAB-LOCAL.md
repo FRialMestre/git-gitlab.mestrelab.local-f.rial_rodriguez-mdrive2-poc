@@ -24,40 +24,30 @@ Servidor externo de Bruker/Topspin:
    [`certs/root_ca_bruker.crt`](/home/jrial/Documents/POCs/mdrive-frontend+keycloak1+keycloak2/certs/root_ca_bruker.crt).
 5. Verificar que el backend confía en
    [`certs/MestrelabCA.crt`](/home/jrial/Documents/POCs/mdrive-frontend+keycloak1+keycloak2/certs/MestrelabCA.crt).
-6. Confirmar en KC1 el IdP OIDC con alias `topspin` y `Store Token` activado.
-7. Confirmar el cliente confidencial `backend-token-exchange` y su permiso de token
-   exchange sobre `topspin`.
-8. Confirmar en KC2 que `mdrive-broker` tiene la redirect URI exacta del
-   endpoint de KC1:
+6. Confirmar en KC1 el cliente `kc2-to-kc1-idp` y su audience mapper.
+7. Confirmar en KC2 el Identity Provider `mdrive` apuntando a KC1.
+8. Confirmar los clientes `mdrive-backend-token-exchange` y
+   `mdrive-kc2-provisioner`, con permisos separados.
+9. Confirmar en KC1 que el cliente `kc2-to-kc1-idp` tiene la redirect URI:
 
    ```text
-   https://mdrive2-poc-keycloak.mestrelab.local/realms/mdrive/broker/topspin/endpoint
+   https://mdrive-topspin50-win-dev.mestrelab.local:8443/auth/realms/Bruker/broker/mdrive/endpoint
    ```
 
-   El path debe coincidir con el alias real del IdP (`topspin`).
+   El path debe coincidir con el alias real del IdP (`mdrive`).
 
-## Prueba de login local
+## Prueba de login y provisioning
 
 1. Abrir la UI.
 2. Iniciar sesión con un usuario local de KC1.
 3. Ejecutar `GET /api/status`.
 4. Confirmar que el backend valida un token cuyo issuer es KC1.
-5. Ejecutar la llamada de Spinpilot.
-6. Confirmar que no se contacta con KC2, middleware ni Spinpilot para el
-   usuario local y que la operación se rechaza o aparece como `skipped`.
-
-## Prueba de login federado
-
-1. Abrir la UI y seleccionar el proveedor `topspin`.
-2. Completar el login en KC2.
-3. Confirmar que KC1 devuelve un token KC1 al frontend.
-4. Confirmar que el backend reconoce `auth_source=topspin`.
 5. Ejecutar `GET /api/middleware/solvents`.
-6. Confirmar que el backend llama al endpoint de token de KC1 con
-   `requested_issuer=topspin`.
-7. Confirmar que la respuesta del exchange contiene un token emitido por KC2.
-8. Confirmar que el middleware valida ese token y llama a Spinpilot.
-9. Confirmar que la respuesta contiene el array JSON recibido desde Spinpilot.
+6. Confirmar que el backend busca el username en KC2.
+7. Confirmar que crea el enlace `mdrive` si no existe.
+8. Repetir la llamada y confirmar que el provisioning es idempotente.
+9. Confirmar que el exchange devuelve un token emitido por KC2.
+10. Confirmar que el middleware valida ese token y llama a Spinpilot.
 
 El frontend no debe recibir el token KC2. El backend tampoco debe registrar el
 JWT completo.
@@ -67,9 +57,10 @@ JWT completo.
 | Caso | Resultado esperado |
 | --- | --- |
 | Token KC1 enviado al middleware | Rechazo por issuer |
-| Usuario local solicita Spinpilot | Rechazo sin llamada externa |
-| `auth_source` ausente o incorrecto | Rechazo |
-| Exchange sin token externo almacenado | Error explícito; no se llama a Spinpilot |
+| Usuario KC1 no existe en KC2 | Rechazo de provisioning |
+| Username duplicado | Rechazo de provisioning |
+| Enlace federado inconsistente | Rechazo sin sobrescribir |
+| Cliente provisioner sin permisos | Error explícito; no se llama a Spinpilot |
 | Token KC2 expirado | Rechazo del middleware o Spinpilot |
 | Audience incorrecta | Rechazo |
 | KC2 no disponible | Error de integración; MDrive local continúa |

@@ -19,41 +19,42 @@ flowchart TB
     U <-->|HTTPS| UI
     U <-->|HTTPS login| KC1
     UI <-->|HTTPS + token KC1| B
-    B <-->|JWKS / token exchange legacy| KC1
-    KC1 <-->|OIDC broker| KC2
+    B -->|JWKS KC1 / provisioning / token exchange| KC2
+    KC2 -->|OIDC Identity Provider mdrive| KC1
     B <-->|Instrument request + token KC2| MW
     MW <-->|Instrument request + token KC2| SP
 ```
 
 El navegador usa KC1 como único punto de entrada de identidad de MDrive. KC1
-puede redirigirlo a KC2 para autenticar usuarios de Bruker. El navegador y el
-backend reciben inicialmente un token de KC1; sólo el backend obtiene el token
-KC2 necesario para Spinpilot.
+autentica al usuario y emite el token para el frontend. KC2 mantiene a KC1 como
+Identity Provider para validar el token durante el provisioning y el exchange.
+Sólo el backend obtiene el token KC2 necesario para Spinpilot.
 
 ## 2. Flujo operativo
 
 1. El usuario inicia sesión en MDrive mediante KC1.
-2. Para un usuario externo, KC1 usa el IdP OIDC `topspin` y completa el login
-   contra KC2.
-3. KC1 emite el token de MDrive y almacena el token externo de KC2.
-4. El backend valida el token KC1 y aplica autorización.
-5. Para una operación de instrumento, el backend exige `auth_source=topspin`.
-6. El backend solicita a KC1 un token exchange legacy con
-   `requested_issuer=topspin`.
+2. KC1 emite el token de MDrive.
+3. El backend valida el token KC1 y aplica autorización.
+4. El backend extrae `preferred_username` y `sub`.
+5. El backend busca el mismo username en KC2 y crea o verifica el enlace
+   federado `mdrive` mediante el cliente provisioner.
+6. El backend solicita a KC2 un token exchange legacy con
+   `subject_issuer=mdrive`.
 7. El backend entrega el token KC2 al middleware.
 8. El middleware valida y propaga el token a Spinpilot.
 
-El backend no usa la Admin API de KC2, no busca usuarios por username/email y
-no crea enlaces federados durante una operación. El middleware tampoco realiza
-exchange ni provisioning.
+El backend usa un cliente provisioner separado y de mínimo privilegio para la
+Admin API de KC2. El provisioning es idempotente y se basa en username y `sub`.
+El middleware no realiza exchange ni provisioning.
 
 ## 3. Requisitos de red
 
 | Origen | Destino | Propósito |
 | --- | --- | --- |
 | Navegador | UI y KC1 | Aplicación y login |
-| KC1 | KC2 | Broker OIDC |
-| Backend | KC1 | JWKS y token exchange |
+| KC2 | KC1 | Identity Provider OIDC, discovery y JWKS |
+| Backend | KC1 | Validación de tokens y JWKS |
+| Backend | KC2 | Provisioning de enlaces y token exchange |
 | Backend | Middleware | Operación interna y token KC2 |
 | Middleware | KC2 | Validación JWT/JWKS |
 | Middleware | Spinpilot | API protegida |
@@ -83,9 +84,11 @@ advertencias TLS.
 
 ## 5. Seguridad de identidad
 
-KC1 debe restringir el IdP `topspin`, las redirect URIs, scopes y permisos del
-cliente `backend-token-exchange`. El token exchange debe estar limitado al issuer
-`topspin` y al uso previsto por Spinpilot.
+KC2 debe restringir el Identity Provider `mdrive`, el cliente
+`mdrive-backend-token-exchange` y el cliente provisioner
+`mdrive-kc2-provisioner`. El token exchange debe estar limitado al alias
+`mdrive` y al uso previsto por Spinpilot. El provisioner sólo debe poder
+consultar usuarios y crear enlaces federados.
 
 KC2 debe controlar qué audience, scopes y roles aparecen en el token externo.
 Spinpilot debe validar issuer, firma, expiración y audience y registrar la
@@ -98,7 +101,8 @@ error operativo claro.
 
 ## 6. Secretos y auditoría
 
-Los secretos de `backend-token-exchange`, `mdrive-broker`, administradores y
+Los secretos de `mdrive-backend-token-exchange`, `mdrive-kc2-provisioner`,
+administradores y
 truststores deben inyectarse mediante secretos de despliegue y rotarse. No se
 deben usar credenciales `admin/admin` en producción.
 

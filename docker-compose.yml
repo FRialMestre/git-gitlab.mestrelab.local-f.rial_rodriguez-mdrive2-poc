@@ -22,10 +22,16 @@ services:
     environment:
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: ${MDRIVE_KC1_ISSUER_URI:-https://mdrive2-poc-keycloak.mestrelab.local/realms/mdrive}
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: ${MDRIVE_KC1_JWK_SET_URI:-https://mdrive2-poc-keycloak.mestrelab.local/realms/mdrive/protocol/openid-connect/certs}
-      APP_TOKEN_EXCHANGE_TOKEN_URL: ${MDRIVE_KC1_TOKEN_URL:-https://mdrive2-poc-keycloak.mestrelab.local/realms/mdrive/protocol/openid-connect/token}
-      APP_TOKEN_EXCHANGE_CLIENT_ID: ${MDRIVE_TOKEN_EXCHANGE_CLIENT_ID:-backend-token-exchange}
-      APP_TOKEN_EXCHANGE_CLIENT_SECRET: ${MDRIVE_TOKEN_EXCHANGE_CLIENT_SECRET:-7sNAd3tOMJTeGuKl8cGxbmnLgnXnriStHUMcIQ9qHkKOhPLaaQ6WZig2ueu0EhiTLlJEOfSnpG1PhG5fDUooH4}
-      APP_TOKEN_EXCHANGE_REQUESTED_ISSUER: ${MDRIVE_TOKEN_EXCHANGE_REQUESTED_ISSUER:-topspin}
+      APP_TOKEN_EXCHANGE_TOKEN_URL: ${MDRIVE_KC2_TOKEN_URL:-https://mdrive-topspin50-win-dev.mestrelab.local:8443/auth/realms/Bruker/protocol/openid-connect/token}
+      APP_TOKEN_EXCHANGE_CLIENT_ID: ${MDRIVE_TOKEN_EXCHANGE_CLIENT_ID:-mdrive-backend-token-exchange}
+      APP_TOKEN_EXCHANGE_CLIENT_SECRET: ${MDRIVE_TOKEN_EXCHANGE_CLIENT_SECRET:-VC2KpsEG3DY7Gaks3ycy4PD6mzYEAvcI}
+      APP_TOKEN_EXCHANGE_SUBJECT_ISSUER: ${MDRIVE_TOKEN_EXCHANGE_SUBJECT_ISSUER:-mdrive}
+      APP_TOKEN_EXCHANGE_AUDIENCE: ${MDRIVE_TOKEN_EXCHANGE_AUDIENCE:-TopSpinAutomation}
+      APP_KC2_ADMIN_BASE_URL: ${MDRIVE_KC2_ADMIN_BASE_URL:-https://mdrive-topspin50-win-dev.mestrelab.local:8443/auth/admin/realms/Bruker}
+      APP_KC2_PROVISIONING_TOKEN_URL: ${MDRIVE_KC2_TOKEN_URL:-https://mdrive-topspin50-win-dev.mestrelab.local:8443/auth/realms/Bruker/protocol/openid-connect/token}
+      APP_KC2_PROVISIONER_CLIENT_ID: ${MDRIVE_KC2_PROVISIONER_CLIENT_ID:-mdrive-backend-provisioner}
+      APP_KC2_PROVISIONER_CLIENT_SECRET: ${MDRIVE_KC2_PROVISIONER_CLIENT_SECRET:-LQWZgS1BwtMWacv6QQs2viLWdE2WcoDu}
+      APP_KC2_IDP_ALIAS: ${MDRIVE_KC2_IDP_ALIAS:-mdrive}
       MIDDLEWARE_BASE_URL: ${MDRIVE_MIDDLEWARE_BASE_URL:-http://middleware:8080}
     depends_on:
       middleware:

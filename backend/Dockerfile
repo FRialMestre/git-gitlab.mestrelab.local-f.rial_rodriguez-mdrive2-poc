@@ -4,6 +4,7 @@ COPY backend/pom.xml pom.xml
 RUN mvn -q -DskipTests dependency:go-offline
 COPY backend/src src
 COPY certs/MestrelabCA.crt /tmp/MestrelabCA.crt
+COPY certs/root_ca_bruker.crt /tmp/root_ca_bruker.crt
 RUN mvn -q -DskipTests package
 RUN keytool -importkeystore -noprompt \
     -srckeystore "$JAVA_HOME/lib/security/cacerts" \
@@ -15,6 +16,12 @@ RUN keytool -importkeystore -noprompt \
 RUN keytool -importcert -noprompt -trustcacerts \
     -alias mestrelab-ca \
     -file /tmp/MestrelabCA.crt \
+    -keystore /tmp/mestrelab-truststore.p12 \
+    -storetype PKCS12 \
+    -storepass changeit
+RUN keytool -importcert -noprompt -trustcacerts \
+    -alias bruker-ca \
+    -file /tmp/root_ca_bruker.crt \
     -keystore /tmp/mestrelab-truststore.p12 \
     -storetype PKCS12 \
     -storepass changeit

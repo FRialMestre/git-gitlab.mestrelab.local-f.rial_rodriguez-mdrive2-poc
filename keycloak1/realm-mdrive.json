@@ -338,7 +338,6 @@
           "attributes": {}
         }
       ],
-      "backend-token-exchange": [],
       "security-admin-console": [],
       "admin-cli": [],
       "account-console": [],
@@ -668,10 +667,10 @@
       ]
     },
     {
-      "id": "73e09bc1-cb3f-432c-b730-d2106904932e",
-      "clientId": "backend-token-exchange",
-      "name": "",
-      "description": "",
+      "id": "8b5e7d4a-9c31-4f2e-a6d8-1c7b9e5f2043",
+      "clientId": "kc2-to-kc1-idp",
+      "name": "KC2 to KC1 Identity Provider",
+      "description": "OIDC client used by KC2 as an identity provider",
       "rootUrl": "",
       "adminUrl": "",
       "baseUrl": "",
@@ -679,13 +678,15 @@
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
-      "secret": "7sNAd3tOMJTeGuKl8cGxbmnLgnXnriStHUMcIQ9qHkKOhPLaaQ6WZig2ueu0EhiTLlJEOfSnpG1PhG5fDUooH4",
-      "redirectUris": [],
+      "secret": "kc2-to-kc1-idp-secret",
+      "redirectUris": [
+        "https://mdrive-topspin50-win-dev.mestrelab.local:8443/auth/realms/Bruker/broker/mdrive/endpoint"
+      ],
       "webOrigins": [],
       "notBefore": 0,
       "bearerOnly": false,
       "consentRequired": false,
-      "standardFlowEnabled": false,
+      "standardFlowEnabled": true,
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
@@ -693,21 +694,12 @@
       "frontchannelLogout": false,
       "protocol": "openid-connect",
       "attributes": {
-        "logout.confirmation.enabled": "false",
         "realm_client": "false",
-        "oidc.ciba.grant.enabled": "false",
-        "backchannel.logout.session.required": "false",
-        "standard.token.exchange.enabled": "true",
-        "oauth2.jwt.authorization.grant.enabled": "false",
-        "post.logout.redirect.uris": "+",
-        "oauth2.device.authorization.grant.enabled": "false",
-        "display.on.consent.screen": "false",
-        "backchannel.logout.revoke.offline.tokens": "false",
-        "dpop.bound.access.tokens": "false"
+        "post.logout.redirect.uris": "+"
       },
       "authenticationFlowBindingOverrides": {},
       "fullScopeAllowed": true,
-      "nodeReRegistrationTimeout": -1,
+      "nodeReRegistrationTimeout": 0,
       "defaultClientScopes": [
         "web-origins",
         "acr",
@@ -870,55 +862,7 @@
         "organization",
         "offline_access",
         "microprofile-jwt"
-      ],
-      "authorizationSettings": {
-        "allowRemoteResourceManagement": false,
-        "policyEnforcementMode": "ENFORCING",
-        "resources": [
-          {
-            "name": "idp.resource.64d89763-f96b-49cf-a10c-b5a4a9bcd189",
-            "type": "IdentityProvider",
-            "ownerManagedAccess": false,
-            "attributes": {},
-            "uris": [],
-            "scopes": [
-              {
-                "name": "token-exchange"
-              }
-            ]
-          }
-        ],
-        "policies": [
-          {
-            "name": "backend-token-exchange",
-            "description": "Policy for the backend token exchange",
-            "type": "client",
-            "logic": "POSITIVE",
-            "decisionStrategy": "UNANIMOUS",
-            "config": {
-              "clients": "[\"backend-token-exchange\"]"
-            }
-          },
-          {
-            "name": "token-exchange.permission.idp.64d89763-f96b-49cf-a10c-b5a4a9bcd189",
-            "description": "",
-            "type": "scope",
-            "logic": "POSITIVE",
-            "decisionStrategy": "UNANIMOUS",
-            "config": {
-              "resources": "[\"idp.resource.64d89763-f96b-49cf-a10c-b5a4a9bcd189\"]",
-              "scopes": "[\"token-exchange\"]",
-              "applyPolicies": "[\"backend-token-exchange\"]"
-            }
-          }
-        ],
-        "scopes": [
-          {
-            "name": "token-exchange"
-          }
-        ],
-        "decisionStrategy": "UNANIMOUS"
-      }
+      ]
     },
     {
       "id": "cf210944-d1a3-4fd4-83eb-2269fccde95d",
@@ -1736,63 +1680,24 @@
           "temporary": false
         }
       ]
-    }
-  ],
-  "identityProviders": [
+    },
     {
-      "alias": "topspin",
-      "displayName": "Topspin",
-      "internalId": "64d89763-f96b-49cf-a10c-b5a4a9bcd189",
-      "providerId": "oidc",
+      "username": "mdrive-user1",
       "enabled": true,
-      "trustEmail": true,
-      "storeToken": true,
-      "addReadTokenRoleOnCreate": false,
-      "linkOnly": false,
-      "hideOnLogin": false,
-      "config": {
-        "tokenUrl": "https://mdrive-topspin50-win-dev.mestrelab.local:8443/auth/realms/Bruker/protocol/openid-connect/token",
-        "acceptsPromptNoneForwardFromClient": "false",
-        "jwksUrl": "https://mdrive-topspin50-win-dev.mestrelab.local:8443/auth/realms/Bruker/protocol/openid-connect/certs",
-        "isAccessTokenJWT": "false",
-        "showInAccountConsole": "ALWAYS",
-        "filteredByClaim": "false",
-        "jwtAuthorizationGrantEnabled": "false",
-        "backchannelSupported": "false",
-        "caseSensitiveOriginalUsername": "false",
-        "loginHint": "false",
-        "clientAuthMethod": "client_secret_post",
-        "allowAdminRoleMapping": "false",
-        "syncMode": "IMPORT",
-        "supportsClientAssertions": "false",
-        "clientSecret": "CkRFnKqyPlwQrhhmwtY8qlAVrStjCx7I",
-        "requiresShortStateParameter": "false",
-        "allowedClockSkew": "0",
-        "defaultScope": "openid profile email",
-        "userInfoUrl": "https://mdrive-topspin50-win-dev.mestrelab.local:8443/auth/realms/Bruker/protocol/openid-connect/userinfo",
-        "validateSignature": "false",
-        "clientId": "mdrive-broker",
-        "uiLocales": "false",
-        "disableNonce": "false",
-        "useJwksUrl": "true",
-        "sendClientIdOnLogout": "false",
-        "pkceEnabled": "false",
-        "authorizationUrl": "https://mdrive-topspin50-win-dev.mestrelab.local:8443/auth/realms/Bruker/protocol/openid-connect/auth",
-        "disableUserInfo": "false",
-        "logoutUrl": "https://mdrive-topspin50-win-dev.mestrelab.local:8443/auth/realms/Bruker/protocol/openid-connect/logout",
-        "sendIdTokenOnLogout": "true",
-        "passMaxAge": "false",
-        "disableTypeClaimCheck": "false"
-      },
-      "types": [
-        "USER_AUTHENTICATION",
-        "CLIENT_ASSERTION",
-        "TRUST_MATERIAL",
-        "EXCHANGE_EXTERNAL_TOKEN",
-        "JWT_AUTHORIZATION_GRANT"
+      "email": "mdrive-user1@example.com",
+      "emailVerified": true,
+      "firstName": "mdrive",
+      "lastName": "user 1",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "kc1pass",
+          "temporary": false
+        }
       ]
     }
   ],
+  "identityProviders": [],
   "identityProviderMappers": [],
   "components": {
     "org.keycloak.userprofile.UserProfileProvider": [

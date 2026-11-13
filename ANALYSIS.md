@@ -8,8 +8,8 @@ flowchart LR
     P --> UI[UI MDrive]
     P --> KC1[KC1\nrealm mdrive]
     UI -->|token KC1| B[Backend MDrive]
-    B -->|JWKS y token exchange legacy| KC1
-    KC1 <-->|OIDC broker| KC2[KC2 externo]
+    B -->|token exchange con subject_issuer| KC2
+    KC2 -->|OIDC Identity Provider mdrive| KC1
     B -->|operación + token KC2| M[Middleware]
     M -->|operación + token KC2| S[Spinpilot externo]
 ```
@@ -30,14 +30,16 @@ URLs públicas actuales:
 
 ### KC1
 
-KC1 es el issuer de MDrive y el broker OIDC hacia KC2. Emite el token que
-consume el frontend y almacena el token externo durante el login federado.
+KC1 es el issuer de MDrive. Emite el token que consume el frontend. KC1 no
+actúa como broker hacia KC2.
 
 ### Backend
 
-El backend valida tokens KC1, aplica autorización de negocio y realiza el token
-exchange contra KC1. Ya no consulta usuarios de KC2, crea enlaces federados ni
-usa la Admin API de KC2.
+El backend valida tokens KC1, aplica autorización de negocio, garantiza el
+enlace federado en KC2 y realiza el token exchange contra KC2. El vínculo se
+basa en `preferred_username` de KC1 y `username` de KC2, guardando el `sub` de
+KC1 como identidad externa. Usa un cliente provisioner separado y de mínimo
+privilegio para la Admin API de KC2.
 
 ### Middleware
 
@@ -60,16 +62,17 @@ y audience, y ejecuta la operación sobre el instrumento.
 5. Las operaciones locales de MDrive continúan disponibles.
 6. Las operaciones contra Spinpilot se rechazan o se marcan como no aplicables.
 
-### Usuario de KC2
+### Usuario de KC1 con acceso a KC2
 
-1. El usuario selecciona el proveedor `topspin` en KC1.
-2. KC1 redirige el navegador a KC2 mediante OIDC.
-3. KC2 autentica al usuario.
-4. KC1 crea/actualiza la identidad brokered y almacena el token externo.
-5. KC1 emite un token KC1 para el frontend.
-6. El backend valida el token y comprueba `auth_source=topspin`.
-7. El backend llama al endpoint de token de KC1 usando token exchange legacy y
-   `requested_issuer=topspin`.
+1. El usuario inicia sesión directamente en KC1.
+2. KC1 emite un token KC1 para el frontend.
+3. El backend valida el token y extrae `preferred_username` y `sub`.
+4. El backend busca el mismo username en KC2.
+5. El backend crea o verifica el enlace federado `mdrive` mediante el cliente
+   provisioner.
+6. El backend llama al endpoint de token de KC2 usando el token KC1 como
+   `subject_token` y `subject_issuer=mdrive`.
+7. KC2 emite el token KC2.
 8. El backend envía el token KC2 al middleware.
 9. El middleware valida y reenvía ese token a Spinpilot.
 
@@ -84,7 +87,7 @@ Java necesitan confianza adicional para los servidores externos:
 
 | Componente | Conexiones HTTPS | CA adicional |
 | --- | --- | --- |
-| Backend | KC1 | `certs/MestrelabCA.crt` |
+| Backend | KC1 y KC2 | `certs/MestrelabCA.crt` y `certs/root_ca_bruker.crt` |
 | Middleware | KC2 y Spinpilot | `certs/root_ca_bruker.crt` |
 | KC1 | KC2 durante el broker | `certs/root_ca_bruker.crt` |
 
@@ -107,10 +110,10 @@ y timestamps según la política de auditoría aplicable.
 
 ## 6. Límites y riesgos conocidos
 
-- El token exchange legacy de KC1 es una dependencia de compatibilidad y debe
-  estar restringido a `backend-token-exchange` y al IdP `topspin`.
-- `Store Token` conserva material sensible en KC1 y debe protegerse con
-  controles de acceso adecuados.
+- El token exchange legacy de KC2 es una dependencia de compatibilidad y debe
+  estar restringido a `mdrive-backend-token-exchange` y al IdP `mdrive`.
+- El cliente provisioner de KC2 tiene privilegios elevados y debe separarse del
+  cliente de token exchange, limitarse a usuarios/enlaces y auditarse.
 - La renovación automática del token externo de KC2 no está garantizada.
 - KC2 y Spinpilot son dependencias externas; deben configurarse timeouts,
   errores explícitos y circuit breakers para operaciones no idempotentes.
